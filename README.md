@@ -1,6 +1,7 @@
 # XIAO WAND
 
 ## Overview
+<img src="https://raw.githubusercontent.com/osafune/biotite/master/img/xiaowand_top.jpg">
 
 ## Board Layout
 
