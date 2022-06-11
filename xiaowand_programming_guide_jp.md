@@ -1,6 +1,7 @@
 # XIAO WANDプログラミングガイド
 
-## 簡単なサンプル例(XIAO BLEを使用)
+## 1.簡単なサンプル例(XIAO BLEを使用)
+
 ### 基本的なフレームワーク
 
 1. Arduno IDEで新しいスケッチを作成し、以下のコードを記述します。
@@ -30,10 +31,15 @@ void xiaowand_shutdown() {
 }
 ```
 
-2. 作成したスケッチのフォルダに`xiaowand_power_lib.ino`ファイルをコピーします。
+2. 作成したスケッチのフォルダに`xiaowand_power_lib.ino`ファイルをコピーします。  
+
 0. コンパイルしてXIAO BLEに書き込みます。書き込みが完了後USBケーブルを抜いて電源ボタンを5秒以上長押しし、ボード上のLEDが消灯したらボタンを離します（電源OFF操作）。
-	- ⚠️ USBケーブルが接続されている間は電源制御にかかわらずXIAOモジュールは電源が入った状態のままになります。センサー側のGroveおよびSDカードの電源も供給され続けます。
-0. 電源ボタンを押してボード上のLEDが点灯したらボタンを離します（電源ON操作）。
+  <img src="https://raw.githubusercontent.com/osafune/xiaowand/master/img/xiaowand_step1.jpg">
+
+	- ⚠️ USBケーブルが接続されている間は電源制御にかかわらずXIAOモジュールは電源が入った状態のままになります。センサー側のGroveおよびSDカードの電源も供給され続けます。  
+
+0. 電源ボタンを押してボード上のLEDが点灯したらボタンを離します（電源ON操作）。  
+
 0. 再度電源ボタンを5秒以上長押ししてボード上のLEDが消灯したらボタンを離します（電源OFF操作）。
 
 
@@ -54,8 +60,7 @@ void loop() {
   xiaowand_polling();
 }
 
-void xiaowand_startup() {
-}
+void xiaowand_startup() {}
 
 void xiaowand_loop() {
   if (xiaowand_check_click()) {
@@ -63,8 +68,7 @@ void xiaowand_loop() {
   }
 }
 
-void xiaowand_shutdown() {
-}
+void xiaowand_shutdown() {}
 ```
 
 ### ボード上のmicroSDカードスロットを使う
@@ -97,11 +101,9 @@ void loop() {
   xiaowand_polling();
 }
 
-void xiaowand_startup() {
-}
+void xiaowand_startup() {}
 
-void xiaowand_loop() {
-}
+void xiaowand_loop() {}
 
 void xiaowand_shutdown() {
   if (myfile) myfile.close(); // シャットダウンの前にクローズする
@@ -115,12 +117,13 @@ XIAO WANDのLED/UART側のGroveコネクタは3.3V/500mAの電源供給ができ
 ```cpp :neopixel_sample.ino
 #include <Adafruit_NeoPixel.h>
 #define XIAOWAND_MODULE_XIAO_BLE
-#define XIAOWAND_NEOPIXEL_PIN 6   // LED側GroveのD0ピン(D6/TXD)
-//#define XIAOWAND_NEOPIXEL_PIN 7   // GroveのD1ピンを使うものもある
+#define XIAOWAND_NEOPIXEL_PIN 6   // LED側GroveのD1ピン(D6/TXD)
+//#define XIAOWAND_NEOPIXEL_PIN 7   // GroveのD0ピンを使うものもある
+#define NEOPIXEL_LED_NUMBER   60  // 制御するLEDの個数 
 
 // NeoPixelの表示（60個をレインボー表示）
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(
-                              60,
+                              NEOPIXEL_LED_NUMBER,
                               XIAOWAND_NEOPIXEL_PIN,
                               NEO_GRB + NEO_KHZ800);
 void rainbow(void) {
@@ -163,8 +166,11 @@ void xiaowand_shutdown() {
 ```
 
 
----
-## 内部ステート遷移とイベント
+***
+
+## 2.ライブラリリファレンス
+
+### 内部ステート遷移とイベント
 
 XIAO WAND電源コントロールの内部ステート遷移は以下のようになっています。
 
@@ -221,10 +227,6 @@ const int xiaowand_click_hold = 5;      // 0.5秒以下でクリック検出(CLI
   :
 ```
 
-
----
-## APIリファレンス
-
 ### XIAOモジュール識別マクロ
 
 XIAO WANDに搭載されているモジュールの識別用のマクロで、スケッチの先頭にXIAOにあわせて一つだけ記述します。
@@ -246,7 +248,6 @@ XIAO WANDに搭載されているモジュールの識別用のマクロで、�
 #define XIAOWAND_MODULE_XIAO_USE_TCC0
 ```
 
----
 ### イベントハンドラ
 
 電源制御ライブラリから明示的に呼び出されるイベントハンドラ関数です。以下の３つはスケッチの中に**必ず**記述しなければなりません。  
@@ -265,7 +266,9 @@ XIAO WANDに搭載されているモジュールの識別用のマクロで、�
 ファイルシステムなどの電源を切る前に開放が必要なリソースの処理や、電源OFFを明示的に処理する必要がある場合に使用します。電源ボタンが離されるまでは電源ONの状態になるため、例えばNeoPixelのLEDテープやI2C接続のディスプレイモジュールの消灯処理などはここで行います。  
 この関数を抜けるまでは電源ONが維持されます。また、この関数に処理が移った時点で`SHUTDOWN`ステートに移行し、以後どのイベントも発生しません。
 
----
+
+## 3.APIリファレンス
+
 ### xiaowand_power_begin()
 
 電源制御処理を初期化し、XIAO WANDの電源コントロールを開始します。
@@ -275,11 +278,11 @@ XIAO WANDに搭載されているモジュールの識別用のマクロで、�
 - 書式  
 *void* xiaowand_power_begin(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -292,6 +295,7 @@ void setup() {
 ```
 
 ---
+
 ### xiaowand_power_end()
 
 XIAO WANDの電源コントロールを終了し、電源をOFFにします。実際にボードの電源がカットされるのはボタンが離されたときになります。  
@@ -302,11 +306,11 @@ XIAO WANDの電源コントロールを終了し、電源をOFFにします。�
 - 書式  
 *void* xiaowand_power_end(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -320,6 +324,7 @@ void foo() {
 ```
 
 ---
+
 ### xiaowand_halt()
 
 XIAO WANDのイベント呼び出しを全て停止し、ボタン長押しによる電源OFFを待ちます。  
@@ -329,11 +334,11 @@ XIAO WANDのイベント呼び出しを全て停止し、ボタン長押しに�
 - 書式  
 *void* xiaowand_halt(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -351,6 +356,7 @@ void setup() {
 ```
 
 ---
+
 ### xiaowand_polling()
 
 XAIO WANDの電源コントロールイベントやボタンの状態監視を行います。  
@@ -360,11 +366,11 @@ XAIO WANDの電源コントロールイベントやボタンの状態監視を�
 - 書式  
 *void* xiaowand_polling(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -375,6 +381,7 @@ void loop() {
 ```
 
 ---
+
 ### xiaowand_blink()
 
 XIAOモジュールのLED点滅パターンを設定します。  
@@ -384,31 +391,34 @@ XIAOモジュールのLED点滅パターンを設定します。
 - 書式1  
 *void* xiaowand_blink(*uint32_t* pattern, *int* cycle)  
 
-- 引数  
-	- pattern  
-	点滅パターンを指定します。パターンは16進数表記で以下のフォーマットで記述します。  
-	`0x<ON時間1><OFF時間1><ON時間2><OFF時間2><ON時間3><OFF時間3><ON時間4><OFF時間4>`  
-	点滅パターンは`ON時間1→OFF時間1→ON時間2→‥‥→OFF時間4→ON時間1→`とループします。各時間は0.1秒単位で、それぞれ0(0x0)～15(0xF)の指定ができます。0を指定した場合はその部分はスキップされます。  
-		- 例１）ON時間が長めの点滅パターン   
-		0x32 : 0.3秒ON→0.2秒OFF
-		- 例２）2秒周期で2回点滅するパターン  
-		0x11170a00 : 0.1秒ON→0.1秒OFF→0.1秒ON→0.7秒OFF→1秒OFF  
+  - 引数  
+    * pattern  
+    点滅パターンを指定します。パターンは最大4フィールドのON時間・OFF時間をそれぞれ4bitで表し、以下のフォーマットで記述します。  
+	  `0x<ON時間1><OFF時間1><ON時間2><OFF時間2><ON時間3><OFF時間3><ON時間4><OFF時間4>`  
+	  点滅パターンは`ON時間1→OFF時間1→ON時間2→‥‥→OFF時間4→ON時間1→`とループします。各時間は0.1秒単位で、それぞれ0(0x0)～15(0xF)の指定ができます。0を指定した場合はその部分はスキップされます。例えば、1秒周期のデューティー50%の点滅を指定するとき、`0x55`、`0x5500`、`0x550000`、`0x55000000`は同じ動作になります。  
+      * 例１）ON時間が長めの点滅パターン   
+      0x32 : 0.3秒ON→0.2秒OFF
+      * 例２）2秒周期で2回点滅するパターン  
+      0x11170a00 : 0.1秒ON→0.1秒OFF→0.1秒ON→0.7秒OFF→1秒OFF  
+      * 例３）2回消灯して点灯で終わるパターン
+      0x01211000 : 0.1秒OFF→0.2秒ON→0.1秒OFF→0.1秒ON
 
-	- cycle  
-	点滅回数を指定します。1以上の整数、または-1を指定します。-1を指定した場合はループ動作になります。  
-	0を指定した場合は書式2の即値ON/OFFになります。  
+    * cycle  
+    点滅回数を指定します。1以上の整数、または-1を指定します。-1を指定した場合はループ動作になります。  
+    0を指定した場合は書式2の即値ON/OFFになります。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 書式2 
 *void* xiaowand_blink(*uint32_t* led, 0)  
 
-- 引数  
-	- led
-	LEDのON/OFFを指定します。`0`を指定した場合はLED消灯、`≠0`を指定した場合はLED点灯します。 
-- 返値  
-なし
+  - 引数  
+	  * led
+	  LEDのON/OFFを指定します。`0`を指定した場合はLED消灯、`≠0`を指定した場合はLED点灯します。 
+
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -452,6 +462,7 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 内部ステートが`ACTIVE`の時に`true`、それ以外の場合の時には`false`を返します。
 
 ---
+
 ### xiaowand_check_press()
 
 ボタンの押下イベントが発生したかどうかを確認します。  
@@ -460,13 +471,14 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *bool* xiaowand_check_press(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-この関数が呼ばれるまでに押下イベントがあれば`true`、なければ`false`を返します。  
+  - 返値  
+  この関数が呼ばれるまでに押下イベントがあれば`true`、なければ`false`を返します。  
 
 ---
+
 ### xiaowand_check_release()
 
 ボタンのリリースイベントが発生したかどうかを確認します。  
@@ -475,13 +487,14 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *bool* xiaowand_check_release(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-この関数が呼ばれるまでにリリースイベントがあれば`true`、なければ`false`を返します。  
+  - 返値  
+  この関数が呼ばれるまでにリリースイベントがあれば`true`、なければ`false`を返します。  
 
 ---
+
 ### xiaowand_check_startup()
 
 スタートアップイベント（ボタンの長押し起動）が発生したかどうかを確認します。  
@@ -491,13 +504,14 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *bool* xiaowand_check_startup(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-この関数が呼ばれるまでにスタートアップイベントがあれば`true`、なければ`false`を返します。  
+  - 返値  
+  この関数が呼ばれるまでにスタートアップイベントがあれば`true`、なければ`false`を返します。  
 
 ---
+
 ### xiaowand_check_shutdown()
 
 シャットダウンイベント（アクティブ時のボタンの長押し）が発生したかどうかを確認します。  
@@ -507,13 +521,14 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *bool* xiaowand_check_startup(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-この関数が呼ばれるまでにシャットダウンイベントがあれば`true`、なければ`false`を返します。  
+  - 返値  
+  この関数が呼ばれるまでにシャットダウンイベントがあれば`true`、なければ`false`を返します。  
 
 ---
+
 ### xiaowand_check_longpush()
 
 ボタンの長押しイベントが発生したかどうかを確認します。  
@@ -523,13 +538,14 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *bool* xiaowand_check_longpush(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-この関数が呼ばれるまでに長押しイベントがあれば`true`、なければ`false`を返します。  
+  - 返値  
+  この関数が呼ばれるまでに長押しイベントがあれば`true`、なければ`false`を返します。  
 
 ---
+
 ### xiaowand_check_click()
 
 ボタンのクリックイベントが発生したかどうかを確認します。  
@@ -538,13 +554,14 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *bool* xiaowand_check_click(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-この関数が呼ばれるまでにクリックイベントがあれば`true`、なければ`false`を返します。  
+  - 返値  
+  この関数が呼ばれるまでにクリックイベントがあれば`true`、なければ`false`を返します。  
 
 ---
+
 ### xiaowand_check_blink()
 
 `xaiowand_blink()`で設定される点滅パターンが動作しているかどうかを確認します。
@@ -552,13 +569,14 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *bool* xiaowand_check_blink(*void*)  
 
-- 引数  
-なし
+  - 引数  
+  なし
 
-- 返値  
-点滅パターンが動作していれば`true`、停止していれば`false`を返します。  
+  - 返値  
+  点滅パターンが動作していれば`true`、停止していれば`false`を返します。  
 
 ---
+
 ### xiaowand_attach_press()
 
 ボタン押下イベントで呼び出されるコールバックを登録します。  
@@ -567,12 +585,12 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 - 書式  
 *void* xiaowand_attach_press(_void (*cb_func)(void)_)  
 
-- 引数  
-  - cb_func  
-  イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+  - 引数  
+    - cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -590,6 +608,7 @@ void count_press(void) {
 ```
 
 ---
+
 ### xiaowand_attach_release()
 
 ボタンリリースイベントで呼び出されるコールバックを登録します。  
@@ -598,12 +617,12 @@ void count_press(void) {
 - 書式  
 *void* xiaowand_attach_release(_void (*cb_func)(void)_)  
 
-- 引数  
-  - cb_func  
-  イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+  - 引数  
+    - cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -621,6 +640,7 @@ void count_release(void) {
 ```
 
 ---
+
 ### xiaowand_attach_startup()
 
 スタートアップイベントで呼び出されるコールバックを登録します。  
@@ -629,12 +649,12 @@ void count_release(void) {
 - 書式  
 *void* xiaowand_attach_startup(_void (*cb_func)(void)_)  
 
-- 引数  
-  - cb_func  
-  イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+  - 引数  
+    - cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -660,12 +680,12 @@ void on_startup(void) {
 - 書式  
 *void* xiaowand_attach_shutdown(_void (*cb_func)(void)_)  
 
-- 引数  
-  - cb_func  
-  イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+  - 引数  
+    - cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -683,6 +703,7 @@ void on_shutdown(void) {
 ```
 
 ---
+
 ### xiaowand_attach_longpush()
 
 長押しイベントで呼び出されるコールバックを登録します。  
@@ -691,12 +712,12 @@ void on_shutdown(void) {
 - 書式  
 *void* xiaowand_attach_longpush(_void (*cb_func)(void)_)  
 
-- 引数  
-  - cb_func  
-  イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+  - 引数  
+    - cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -714,6 +735,7 @@ void on_longpush(void) {
 ```
 
 ---
+
 ### xiaowand_attach_click()
 
 クリックイベントで呼び出されるコールバックを登録します。  
@@ -722,12 +744,12 @@ void on_longpush(void) {
 - 書式  
 *void* xiaowand_attach_click(_void (*cb_func)(void)_)  
 
-- 引数  
-  - cb_func  
-  イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+  - 引数  
+    - cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
@@ -753,14 +775,14 @@ void on_click(void) {
 - 書式  
 *void* xiaowand_attach_click(_void (*cb_on_func)(void)_, _void (*cb_off_func)(void)_)  
 
-- 引数  
-  - cb_on_func  
-  点滅ONで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
-  - cb_off_func  
-  点滅OFFで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+  - 引数  
+    - cb_on_func  
+    点滅ONで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+    - cb_off_func  
+    点滅OFFで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
 
-- 返値  
-なし
+  - 返値  
+  なし
 
 - 記述例  
 
