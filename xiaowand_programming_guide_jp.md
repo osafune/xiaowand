@@ -34,8 +34,8 @@ void xiaowand_shutdown() {
 2. 作成したスケッチのフォルダに`xiaowand_power_lib.ino`ファイルをコピーします。  
 
 3. コンパイルしてXIAO BLEに書き込みます。書き込みが完了後USBケーブルを抜いて電源ボタンを5秒以上長押しし、ボード上のLEDが消灯したらボタンを離します（電源OFF操作）。  
-<img src="https://raw.githubusercontent.com/osafune/xiaowand/master/img/xiaowand_step1.jpg">  
-	- ⚠️ USBケーブルが接続されている間は電源制御にかかわらずXIAOモジュールは電源が入った状態のままになります。センサー側のGroveおよびSDカードの電源も供給され続けます。  
+  <img src="https://raw.githubusercontent.com/osafune/xiaowand/master/img/xiaowand_step1.jpg">  
+  - ⚠️ USBケーブルが接続されている間は電源制御にかかわらずXIAOモジュールは電源が入った状態のままになります。センサー側のGroveおよびSDカードの電源も供給され続けます。  
 
 4. 電源ボタンを押してボード上のLEDが点灯したらボタンを離します（電源ON操作）。  
 
