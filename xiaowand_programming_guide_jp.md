@@ -31,7 +31,7 @@ void xiaowand_shutdown() {
 }
 ```
 
-2. 作成したスケッチのフォルダに`xiaowand_power_lib.ino`ファイルをコピーします。  
+2. 作成したスケッチのフォルダに`xiaowand_lib.ino`ファイルをコピーします。  
 
 3. コンパイルしてXIAO BLEに書き込みます。書き込みが完了後USBケーブルを抜いて電源ボタンを5秒以上長押しし、ボード上のLEDが消灯したらボタンを離します（電源OFF操作）。  
   ![img_step1](https://raw.githubusercontent.com/osafune/xiaowand/master/img/xiaowand_step1.jpg)  
@@ -44,7 +44,8 @@ void xiaowand_shutdown() {
   
 ### ボード上の圧電ブザーを使う
 
-XIAO WANDの圧電ブザーは`D0`ピンに接続されています。音を鳴らす場合は`tone()`で指定します。  
+XIAO WANDの圧電ブザーは`D0`ピンに接続されています。音を鳴らす場合は`tone()`で指定します。ボードの圧電ブザーは`D0`ピンに接続されています。  
+また、ライブラリのMMLサービスを使うとMMLで記述した楽譜を演奏することができます。  
 
 ```cpp :beep_sample.ino
 #define XIAOWAND_MODULE_XIAO_BLE
@@ -212,7 +213,7 @@ XIAO WANDに搭載されているモジュールの識別用のマクロで、�
 ```
 
 
-### 内部ステート遷移とイベント
+### 電源ステート遷移とイベント
 
 XIAO WAND電源コントロールの内部ステート遷移は以下のようになっています。
 
@@ -256,17 +257,17 @@ flowchart TD
 0. ボタンクリックイベント  
 `ACTIVE`ステートでボタンが押された時間が0.5秒以下のときに発生します。操作上、ボタンリリースイベントも同時に発生することに注意してください。
 
-各イベントの発生時間は`xiaowand_power_lib.ino`の先頭部で宣言されている以下の値を書き換えて調整することができます。  
+各イベントの発生時間は`xiaowand_lib.ino`の先頭部で宣言されている以下の値を書き換えて調整することができます。  
 
-```cpp :xiaowand_power_lib.ino(抜粋)
+```cpp :xiaowand_lib.ino(抜粋)
 // 定数
 const int xiaowand_pswcount_max = 100;  // 長押し検出の最大時間(0.1秒単位で10秒まで)
 const int xiaowand_startup_hold = 50;   // 電源ONから5秒間長押し(STARTUP)
 const int xiaowand_shutdown_hold = 50;  // 5秒間長押しで電源OFF(SHUTDOWN)
 const int xiaowand_longpush_hold = 20;  // 2秒で長押し検出(LONGPUSH)
 const int xiaowand_click_hold = 5;      // 0.5秒以下でクリック検出(CLICK)
-  :
-  :
+    :
+    :
 ```
 
 <br>
@@ -275,9 +276,9 @@ const int xiaowand_click_hold = 5;      // 0.5秒以下でクリック検出(CLI
 
 ### xiaowand_power_begin()
 
-電源制御処理を初期化し、XIAO WANDの電源コントロールを開始します。
-全てのイベントフラグおよびコールバックは初期化され、内部ステートは`STARTUP`に設定されます。
-この関数の実行までは電源ONの維持はされないため、通常は`setup()`の先頭に記述します。
+電源制御処理を初期化し、XIAO WANDの電源コントロールおよびMMLサービスを開始します。  
+全てのイベントフラグおよびコールバックは初期化され、内部ステートは`STARTUP`に設定されます。この関数の実行までは電源ONの維持はされないため、通常は`setup()`の先頭に記述します。  
+※この関数は`setup()`以外の場所では使うことができません。  
 
 - 書式  
 *void* xiaowand_power_begin(*void*)  
@@ -293,16 +294,16 @@ const int xiaowand_click_hold = 5;      // 0.5秒以下でクリック検出(CLI
 ```cpp
 void setup() {
   xiaowand_power_begin();
-	:
-	:
+    :
+    :
 }
 ```
 
 ---
 ### xiaowand_power_end()
 
-XIAO WANDの電源コントロールを終了し、電源をOFFにします。実際にボードの電源がカットされるのはボタンが離されたときになります。  
-ボタン監視を停止し、LEDをOFFにして内部ステートは`SHUTDOWN`に設定されます。  
+XIAO WANDの電源コントロールおよびMMLサービスを終了し、電源をOFFにします。実際にボードの電源がカットされるのはボタンが離されたときになります。  
+ボタン監視を停止し、LED・サウンド発生をOFFにして内部ステートは`SHUTDOWN`に設定されます。  
 この関数はシャットダウンイベント発生時に内部で自動的に呼ばれるため、通常は使用する必要はありません。ソフトウェア的に電源OFFが必要な場合に使用します。  
 また、この関数ではシャットダウンイベントは発生しません。リソースの開放等の処理は予め済ませておく必要があります。
 
@@ -320,8 +321,8 @@ XIAO WANDの電源コントロールを終了し、電源をOFFにします。�
 ```cpp
 void foo() {
   // リソース開放等の処理
-	:
-	:
+    :
+    :
   xiaowand_power_end();
 }
 ```
@@ -331,7 +332,8 @@ void foo() {
 
 XIAO WANDのイベント呼び出しを全て停止し、ボタン長押しによる電源OFFを待ちます。  
 システム中で続行不可能な状態が発生した場合に、`while(1)`ループの代わりに使用します。  
-内部ステートは`HALT`に設定され、以後全てのイベントは発生しなくなります。ボタン長押しで電源OFFを行ったときにもシャットダウンイベントは発生しません。リソースの開放等の処理は予め済ませておく必要があります。
+内部ステートは`HALT`に設定され、以後全てのイベントは発生しなくなります。ボタン長押しで電源OFFを行ったときにもシャットダウンイベントは発生しません。リソースの開放等の処理は予め済ませておく必要があります。  
+※この関数はイベントコールバックの中では使うことができません。  
 
 - 書式  
 *void* xiaowand_halt(*void*)  
@@ -363,6 +365,7 @@ void setup() {
 XAIO WANDの電源コントロールイベントやボタンの状態監視を行います。  
 ステートの状態遷移やイベントの呼び出しを行うため、`loop()`の中に記述します。他ライブラリ等でポーリングを使用する場合はループ処理が最短になるよう注意してください。  
 通常のユーザープログラムコードは`loop()`の代わりに`xiaowand_loop()`に記述します。
+※この関数は`loop()`以外の場所では使うことができません。  
 
 - 書式  
 *void* xiaowand_polling(*void*)  
@@ -378,6 +381,12 @@ XAIO WANDの電源コントロールイベントやボタンの状態監視を�
 ```cpp
 void loop() {
   xiaowand_polling();
+}
+
+void xiaowand_loop() {
+  // ユーザープログラムはこちら側に書く //
+    :
+    :
 }
 ```
 
@@ -400,7 +409,7 @@ XIAOモジュールのLED点滅パターンを設定します。
       0x32 : 0.3秒ON→0.2秒OFF
       * 例２）2秒周期で2回点滅するパターン  
       0x11170a00 : 0.1秒ON→0.1秒OFF→0.1秒ON→0.7秒OFF→1秒OFF  
-      * 例３）2回消灯して点灯で終わるパターン
+      * 例３）2回消灯して点灯で終わるパターン  
       0x01211000 : 0.1秒OFF→0.2秒ON→0.1秒OFF→0.1秒ON
 
     * cycle  
@@ -427,8 +436,8 @@ void setup() {
   xiaowand_power_begin();
   xiaowand_blink(1, 0);   // LED_BULTINをON
 }
-	:
-	:
+    :
+    :
 
 void xiaowand_startup() {
   xiaowand_blink(0x11170a00, -1);	// 長押し起動で2回点滅パターンをループ
@@ -442,8 +451,8 @@ void xiaowand_loop() {
     tone(XIAOWAND_BUZZ_PIN, 1000, 100);	// 長押しされたらbeep音
   }
 }
-	:
-	:
+    :
+    :
 ```
 
 ---
@@ -790,8 +799,8 @@ void on_click(void) {
 
 ```cpp
 void setup() {
-	:
-	:
+    :
+    :
   pinMode(LEDB, OUTPUT);
   pinMode(LEDR, OUTPUT);
   xiaowand_attach_blink(led_blue, led_red);

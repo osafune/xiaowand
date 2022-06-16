@@ -5,7 +5,7 @@
 
 XIAO WANDはSeeedstudioの小型MCUモジュール "XIAO" シリーズ専用のI/O・電源ベースボードです。  
 W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電源モジュール"[ENEBATT](https://osafune.github.io/enebatt_jp.html)"を搭載しており、単三形ニッケル水素電池1本でGroveセンサーモジュールやLEDテープの制御が可能です。 
-ボードの電源制御およびボタンイベント取得にはArduino IDE用のライブラリ(inoファイル)が提供され、XIAO BLEと組み合わせれば簡単にBluetooth制御の電飾ユニットが製作できます。
+専用のArduino IDE用ライブラリ「xiaowand_lib」では、ボードの電源制御およびボタンイベント取得、LEDパターン点滅、MMLバックグランド再生の機能が提供され、XIAO BLEと組み合わせれば簡単にBluetooth制御の電飾ユニットが製作できます。
 
 - ボード搭載ペリフェラル
 	* 電源モジュール×1 (Ni-MH AA,3.3V/500mA)
@@ -29,7 +29,7 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 - [XAIO WAND プログラミングガイド](xiaowand_programming_guide_jp.md)
 
 ## Resources
-- [電源コントロールライブラリ(Arduino IDE用)](src/xiaowand_power_lib.ino)
+- [XIAO WAND ライブラリ(Arduino IDE用)](src/xiaowand_lib.ino)
 - 回路図(Rev.B)
 - [ENEBATT](https://osafune.github.io/enebatt_jp.html)
 
