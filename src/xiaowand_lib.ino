@@ -53,8 +53,8 @@ const int xiaowand_pwren_pin = D3;      // XIAO WANDの電源制御出力ピン(
 const int xiaowand_buzzer_pin = D0;			// XIAO WANDの圧電ブザーピン(PIN_D0)
 #endif
 
-#define XIAOWAND_REVISION_A             // XIAO WAND Rev.Aの指示
-//#define XIAOWAND_REVISION_B             // XIAO WAND Rev.Bの指示
+//#define XIAOWAND_REVISION_A             // XIAO WAND Rev.Aの指示
+#define XIAOWAND_REVISION_B             // XIAO WAND Rev.Bの指示
 
 
 // ------------------------------------------------------------------------------ //
