@@ -2,7 +2,7 @@
 //    XIAO WAND電源コントロールライブラリ
 //
 //      Author  : Shun OSAFUNE (s.osafune@j7system.jp)
-//      Release : 2022/06/11 Version 0.99
+//      Release : 2022/06/16 Version 0.9
 // ------------------------------------------------------------------------------ //
 //
 // The MIT License
@@ -28,7 +28,7 @@
 // ------------------------------------------------------------------------------ //
 
 // *** 使い方 ***
-// このinoファイルを対象のスケッチのフォルダに格納（またはコピー）してください
+// このinoファイルを対象のスケッチのフォルダにコピーしてください
 
 
 // 定数
@@ -38,14 +38,19 @@ const int xiaowand_shutdown_hold = 50;  // 5秒間長押しで電源OFF(SHUTDOWN
 const int xiaowand_longpush_hold = 20;  // 2秒で長押し検出(LONGPUSH)
 const int xiaowand_click_hold = 5;      // 0.5秒以下でクリック検出(CLICK)
 
-//#define XIAOWAND_REVISION_A             // XIAO WAND Rev.Aの指示
 #define XIAOWAND_REVISION_B             // XIAO WAND Rev.Bの指示
+
+#if defined(XIAOWAND_MODULE_XIAO) || defined(XIAOWAND_MODULE_XIAO_USE_TCC0)
 const int xiaowand_pwrsw_pin = 1;       // XIAO WANDの電源ボタン入力ピン(PIN_D1)
 const int xiaowand_pwren_pin = 3;       // XIAO WANDの電源制御出力ピン(PIN_D3)
+#else
+const int xiaowand_pwrsw_pin = D1;      // XIAO WANDの電源ボタン入力ピン(PIN_D1)
+const int xiaowand_pwren_pin = D3;      // XIAO WANDの電源制御出力ピン(PIN_D3)
+#endif
 
 // 制御変数
-typedef enum {STARTUP, ACTIVE, SHUTDOWN, HALT} xiaowand_power_state_type;
-volatile xiaowand_power_state_type xiaowand_state = STARTUP;
+enum xiaowand_power_state_type {STARTUP, ACTIVE, SHUTDOWN, HALT};
+volatile enum xiaowand_power_state_type xiaowand_state = STARTUP;
 
 volatile bool xiaowand_event_press = false;
 volatile bool xiaowand_event_release = false;
@@ -53,6 +58,7 @@ volatile bool xiaowand_event_startup = false;
 volatile bool xiaowand_event_shutdown = false;
 volatile bool xiaowand_event_longpush = false;
 volatile bool xiaowand_event_click = false;
+static bool xiaowand_event_exec = false;
 static void (*xiaowand_press_cb)(void) = NULL;
 static void (*xiaowand_release_cb)(void) = NULL;
 static void (*xiaowand_startup_cb)(void) = NULL;
@@ -117,6 +123,11 @@ bool xiaowand_check_click(void) {
 
 
 ///// イベントコールバック登録 /////
+// 呼び出し元がイベントコールバックかどうかを返す
+bool xiaowand_is_eventcb(void) {
+  return xiaowand_event_exec;
+}
+
 // ボタン押下イベントのコールバックを登録
 void xiaowand_attach_press(void (*cb_func)(void)) {
   xiaowand_press_cb = cb_func;
@@ -212,17 +223,25 @@ static void xiaowand_blink_interval(void) {
 }
 
 // デフォルトのLED ON/OFF処理
+#ifndef XIAOWAND_BLINK_LED_PIN
+# define XIAOWAND_BLINK_LED_PIN LED_BUILTIN
+#endif
+#if (XIAOWAND_BLINK_LED_PIN >= 0)
 static void xiaowand_blink_on_builtin(void) {
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  pinMode(XIAOWAND_BLINK_LED_PIN, OUTPUT);
+  digitalWrite(XIAOWAND_BLINK_LED_PIN, LOW);
 }
 static void xiaowand_blink_off_builtin(void) {
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  pinMode(XIAOWAND_BLINK_LED_PIN, OUTPUT);
+  digitalWrite(XIAOWAND_BLINK_LED_PIN, HIGH);
 }
+#endif
 
 
 ///// 電源コントロール /////
+// コールバック呼び出しのマクロ
+#define XIAOWAND_DO_EVENTCALLBACK(_func) if (_func) {xiaowand_event_exec=true; (*(_func))(); xiaowand_event_exec=false;}
+
 // 電源ボタンイベント検出のインターバル処理
 static void xiaowand_power_interval(void) {
   static int pwrsw_count = 1;
@@ -233,26 +252,26 @@ static void xiaowand_power_interval(void) {
     // ボタン押下イベントの判定
     if (xiaowand_state != HALT && pwrsw_count == 0) {
       xiaowand_event_press = true;
-      if (xiaowand_press_cb) (*xiaowand_press_cb)();
+      XIAOWAND_DO_EVENTCALLBACK(xiaowand_press_cb);
     }
 
     // スタートアップイベントの判定
     if (xiaowand_state == STARTUP && pwrsw_count == xiaowand_startup_hold) {
       xiaowand_event_startup = true;
-      if (xiaowand_startup_cb) (*xiaowand_startup_cb)();
+      XIAOWAND_DO_EVENTCALLBACK(xiaowand_startup_cb);
     }
 
     // ボタン長押しイベントの判定
     if (xiaowand_state == ACTIVE && pwrsw_count == xiaowand_longpush_hold) {
       xiaowand_event_longpush = true;
-      if (xiaowand_longpush_cb) (*xiaowand_longpush_cb)();
+      XIAOWAND_DO_EVENTCALLBACK(xiaowand_longpush_cb);
     }
 
     // シャットダウンイベントの判定
     if ((xiaowand_state == ACTIVE || xiaowand_state == HALT) && pwrsw_count == xiaowand_shutdown_hold) {
       xiaowand_state = SHUTDOWN;
       xiaowand_event_shutdown = true;
-      if (xiaowand_shutdown_cb) (*xiaowand_shutdown_cb)();
+      XIAOWAND_DO_EVENTCALLBACK(xiaowand_shutdown_cb);
     }
 
     if (pwrsw_count < xiaowand_pswcount_max) pwrsw_count++;
@@ -261,13 +280,13 @@ static void xiaowand_power_interval(void) {
     // ボタンリリースイベントの判定
     if (xiaowand_state != HALT && pwrsw_count > 0) {
       xiaowand_event_release = true;
-      if (xiaowand_release_cb) (*xiaowand_release_cb)();
+      XIAOWAND_DO_EVENTCALLBACK(xiaowand_release_cb);
     }
 
     // クリックイベントの判定
     if (xiaowand_state == ACTIVE && (pwrsw_count > 0 && pwrsw_count <= xiaowand_click_hold)) {
       xiaowand_event_click = true;
-      if (xiaowand_click_cb) (*xiaowand_click_cb)();
+      XIAOWAND_DO_EVENTCALLBACK(xiaowand_click_cb);
     }
 
     // ボタンリリースでACTIVEステートへ遷移
@@ -283,29 +302,21 @@ static void xiaowand_power_interval(void) {
 }
 
 // XIAOによって異なるインターバルタイマーのラッピング
-// XIAOWAND_MODULE_xxxによる宣言を優先し、無い場合はインクルードするファイルで切り替え
+// XIAOWAND_MODULE_xxxによる定義名でインターバル実装部分を切り替え
 #if defined(XIAOWAND_MODULE_XIAO_BLE)
-#if defined(SOFTWARETIMER_H_)
-#define _XIAOWAND_USE_SOFTWARETIMER
-#else
-#define _XIAOWAND_USE_SCHEDULER
-#endif
+# if defined(SOFTWARETIMER_H_)
+#  define _XIAOWAND_USE_SOFTWARETIMER
+# else
+#  define _XIAOWAND_USE_SCHEDULER
+# endif
 #elif defined(XIAOWAND_MODULE_XIAO_RP2040)
-#define _XIAOWAND_USE_SCHEDULER
+# define _XIAOWAND_USE_SCHEDULER
 #elif defined(XIAOWAND_MODULE_XIAO)
-#define _XIAOWAND_USE_TC3
+# define _XIAOWAND_USE_TC3
 #elif defined(XIAOWAND_MODULE_XIAO_USE_TCC0)
-#define _XIAOWAND_USE_TCC0
-#elif defined(_SCHEDULER_H_)
-#define _XIAOWAND_USE_SCHEDULER
-#elif defined(_TIMER_TC3_H_)
-#define _XIAOWAND_USE_TC3
-#elif defined(_TIMER_TCC0_H_)
-#define _XIAOWAND_USE_TCC0
-#elif defined(SOFTWARETIMER_H_)
-#define _XIAOWAND_USE_SOFTWARETIMER
+# define _XIAOWAND_USE_TCC0
 #else
-#error There is no XIAO module name or interval timer resource indication.
+# error There is no XIAO module name or interval timer resource indication.
 #endif
 
 // XIAO BLEでRTOSソフトウェアタイマーを使う時
@@ -322,13 +333,14 @@ static void xiaowand_inverval_begin(void) {
 static void xiaowand_interval_end(void) {
   TickerTimer.stop();
 }
+#undef _XIAOWAND_USE_SOFTWARETIMER
 #endif
 
 // XIAO BLE/XIAO RP2040でタスクスケジューラーを使う時
 #ifdef _XIAOWAND_USE_SCHEDULER
 #include <Scheduler.h>
-volatile bool xiaowand_interval_enable;
-static void xiaowand_interval_loop() {
+volatile bool xiaowand_interval_enable = false;
+static void xiaowand_interval_loop(void) {
   delay(100);
   if (xiaowand_interval_enable) xiaowand_power_interval();
 }
@@ -339,30 +351,49 @@ static void xiaowand_inverval_begin(void) {
 static void xiaowand_interval_end(void) {
   xiaowand_interval_enable = false;
 }
+#undef _XIAOWAND_USE_SCHEDULER
 #endif
 
-// XIAOでTC3タイマーを使う時
+// XIAOでTC3/TCC0タイマーを使う時
+#if defined(_XIAOWAND_USE_TC3) || defined(_XIAOWAND_USE_TCC0)
+static void (*xiaowand_interval_cb)(void) = NULL;
+static void xiaowand_interval_attach(void (*cb_func)(void)) {
+  xiaowand_interval_cb = cb_func;
+}
+static void xiaowand_interval_loop(void) {
+  static int power_interval_count = 0;
+
+  if (power_interval_count) {
+    power_interval_count--;
+  } else {
+    xiaowand_power_interval();
+    power_interval_count = 100 - 1;
+  }
+
+  if (xiaowand_interval_cb) (*xiaowand_interval_cb)();
+}
+#endif
 #ifdef _XIAOWAND_USE_TC3
 #include <TimerTC3.h>
 static void xiaowand_inverval_begin(void) {
-  TimerTc3.initialize(100000);
-  TimerTc3.attachInterrupt(xiaowand_power_interval);
+  TimerTc3.initialize(1000);    // 1msごとにループを起床
+  TimerTc3.attachInterrupt(xiaowand_interval_loop);
 }
 static void xiaowand_interval_end(void) {
   TimerTc3.detachInterrupt();
 }
+#undef _XIAOWAND_USE_TC3
 #endif
-
-// XIAOでTCC0タイマーを使う時
 #ifdef _XIAOWAND_USE_TCC0
 #include <TimerTCC0.h>
 static void xiaowand_inverval_begin(void) {
-  TimerTcc0.initialize(100000);
-  TimerTcc0.attachInterrupt(xiaowand_power_interval);
+  TimerTcc0.initialize(1000);   // 1msごとにループを起床
+  TimerTcc0.attachInterrupt(xiaowand_interval_loop);
 }
 static void xiaowand_interval_end(void) {
   TimerTcc0.detachInterrupt();
 }
+#undef _XIAOWAND_USE_TCC0
 #endif
 
 
@@ -377,6 +408,7 @@ void xiaowand_power_begin() {
   xiaowand_event_longpush = false;
   xiaowand_event_click = false;
 
+  xiaowand_event_exec = false;
   xiaowand_attach_press(NULL);
   xiaowand_attach_release(NULL);
   xiaowand_attach_startup(NULL);
@@ -385,15 +417,18 @@ void xiaowand_power_begin() {
   xiaowand_attach_click(NULL);
 
   xiaowand_blink(0, -1);
+#if (XIAOWAND_BLINK_LED_PIN >= 0)
   xiaowand_attach_blink(xiaowand_blink_on_builtin, xiaowand_blink_off_builtin);
+#else
+  xiaowand_attach_blink(NULL, NULL);
+#endif
 
   pinMode(xiaowand_pwrsw_pin, INPUT_PULLUP);
   pinMode(xiaowand_pwren_pin, OUTPUT);
-
-#if defined(XIAOWAND_REVISION_A)
-  digitalWrite(xiaowand_pwren_pin, LOW);
-#elif defined(XIAOWAND_REVISION_B)
+#if defined(XIAOWAND_REVISION_B)
   digitalWrite(xiaowand_pwren_pin, HIGH);
+#else
+  digitalWrite(xiaowand_pwren_pin, LOW);
 #endif
 
   xiaowand_inverval_begin();
@@ -405,10 +440,10 @@ void xiaowand_power_end(void) {
   xiaowand_interval_end();
   xiaowand_blink(0, 0);     // 回数が0の時はON/OFFを即時反映
 
-#if defined(XIAOWAND_REVISION_A)
-  pinMode(xiaowand_pwren_pin, INPUT);
-#elif defined(XIAOWAND_REVISION_B)
+#if defined(XIAOWAND_REVISION_B)
   digitalWrite(xiaowand_pwren_pin, LOW);
+#else
+  pinMode(xiaowand_pwren_pin, INPUT);
 #endif
 }
 
@@ -417,7 +452,7 @@ void xiaowand_halt(void) {
   xiaowand_state = HALT;
   xiaowand_attach_shutdown(xiaowand_power_end);
 
-  while (1) yield();
+  while (true) yield();
 }
 
 // メインループ（ポーリング）

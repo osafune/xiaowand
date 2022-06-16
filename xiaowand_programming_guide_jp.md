@@ -11,7 +11,7 @@
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);    // BULTIN_LEDをON
+  xiaowand_blink(1, 0);    // LED_BULTINをON
 }
 
 void loop() {
@@ -48,11 +48,11 @@ XIAO WANDの圧電ブザーは`D0`ピンに接続されています。音を鳴�
 
 ```cpp :beep_sample.ino
 #define XIAOWAND_MODULE_XIAO_BLE
-#define XIAOWAND_BUZZ_PIN 0   // PIN_D0に圧電ブザー
+#define XIAOWAND_BUZZ_PIN D0   // PIN_D0に圧電ブザー
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);       // BULTIN_LEDをON
+  xiaowand_blink(1, 0);       // LED_BULTINをON
 }
 
 void loop() {
@@ -78,13 +78,13 @@ XIAO WANDのmciroSDカードスロットはSPI接続で使用することがで�
 ```cpp :sd_sample.ino
 #include <SD.h>
 #define XIAOWAND_MODULE_XIAO_BLE
-#define XIAOWAND_SD_SS_PIN 2  // PIN_D2にSDカードの/CS
+#define XIAOWAND_SD_SS_PIN D2  // PIN_D2にSDカードの/CS
 
 File myfile;
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);       // BULTIN_LEDをON
+  xiaowand_blink(1, 0);       // LED_BULTINをON
 
   if (!SD.begin(XIAOWAND_SD_SS_PIN)) {
     xiaowand_blink(0x32, -1);
@@ -118,8 +118,8 @@ XIAO WANDのLED/UART側のGroveコネクタは3.3V/500mAの電源供給ができ
 ```cpp :neopixel_sample.ino
 #include <Adafruit_NeoPixel.h>
 #define XIAOWAND_MODULE_XIAO_BLE
-#define XIAOWAND_NEOPIXEL_PIN 6   // LED側GroveのD1ピン(D6/TXD)
-//#define XIAOWAND_NEOPIXEL_PIN 7   // GroveのD0ピンを使うものもある
+#define XIAOWAND_NEOPIXEL_PIN D6   // LED側GroveのD1ピン(D6/TXD)
+//#define XIAOWAND_NEOPIXEL_PIN D7   // GroveのD0ピンを使うものもある
 #define NEOPIXEL_LED_NUMBER   60  // 制御するLEDの個数 
 
 // NeoPixelの表示（60個をレインボー表示）
@@ -142,7 +142,7 @@ void rainbow(void) {
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);       // BULTIN_LEDをON
+  xiaowand_blink(1, 0);       // LED_BULTINをON
 
   strip.begin();  // NeoPixel開始、この時全てのLEDは0に設定される
   strip.show();   // LEDへデータ転送し初期化する
@@ -170,6 +170,47 @@ void xiaowand_shutdown() {
 <br>
 
 ## 2.ライブラリリファレンス
+
+### イベントハンドラ
+
+電源制御ライブラリから明示的に呼び出されるイベントハンドラ関数です。以下の３つはスケッチの中に**必ず**記述しなければなりません。  
+
+- **xiaowand_startup()**  
+電源OFFから電源ボタン長押しで起動したときに一度だけ呼び出される関数です。  
+ブートモードを切り替えたい場合（例：Bluetoothのペアリングモードに入る）に使用します。  
+この関数を抜けるまでは`xiaowand_loop()`や`xiaowand_shutdown()`には制御が移りません。  
+
+- **xiaowand_loop()**  
+電源状態がアクティブの時に常に呼び出される関数です。  
+電源ステートに応じた処理を行うため、通常のユーザープログラムコードは `loop()`の代わりにこの関数へ記述します。  
+
+- **xiaowand_shutdown()**  
+アクティブの状態から電源ボタン長押しでシャットダウンイベントが発生したときに、電源がカットされる前に一度だけ呼び出される関数です。  
+ファイルシステムなどの電源を切る前に開放が必要なリソースの処理や、電源OFFを明示的に処理する必要がある場合に使用します。電源ボタンが離されるまでは電源ONの状態になるため、例えばNeoPixelのLEDテープやI2C接続のディスプレイモジュールの消灯処理などはここで行います。  
+この関数を抜けるまでは電源ONが維持されます。また、この関数に処理が移った時点で`SHUTDOWN`ステートに移行し、以後どのイベントも発生しません。
+
+
+### XIAOモジュール識別マクロ
+
+XIAO WANDに搭載されているモジュールの識別用のマクロで、スケッチの先頭にXIAOにあわせて一つだけ記述します。
+
+```cpp
+// XIAO BLEまたはXIAO BLE Senseを搭載している場合
+#define XIAOWAND_MODULE_XIAO_BLE
+```
+```cpp
+// XIAO RP2040を搭載している場合
+#define XIAOWAND_MODULE_XIAO_RP2040
+```
+```cpp
+// Seeeduino XIAOを搭載している場合（インターバルタイマーはTC3を使用）
+#define XIAOWAND_MODULE_XIAO
+```
+```cpp
+// Seeeduino XIAOを搭載していて、インターバルタイマーにTCC0使う場合
+#define XIAOWAND_MODULE_XIAO_USE_TCC0
+```
+
 
 ### 内部ステート遷移とイベント
 
@@ -227,45 +268,6 @@ const int xiaowand_click_hold = 5;      // 0.5秒以下でクリック検出(CLI
   :
   :
 ```
-
-### XIAOモジュール識別マクロ
-
-XIAO WANDに搭載されているモジュールの識別用のマクロで、スケッチの先頭にXIAOにあわせて一つだけ記述します。
-
-```cpp
-// XIAO BLEまたはXIAO BLE Senseを搭載している場合
-#define XIAOWAND_MODULE_XIAO_BLE
-```
-```cpp
-// XIAO RP2040を搭載している場合
-#define XIAOWAND_MODULE_XIAO_RP2040
-```
-```cpp
-// Seeeduino XIAOを搭載している場合（インターバルタイマーはTC3を使用）
-#define XIAOWAND_MODULE_XIAO
-```
-```cpp
-// Seeeduino XIAOを搭載していて、インターバルタイマーにTCC0使う場合
-#define XIAOWAND_MODULE_XIAO_USE_TCC0
-```
-
-### イベントハンドラ
-
-電源制御ライブラリから明示的に呼び出されるイベントハンドラ関数です。以下の３つはスケッチの中に**必ず**記述しなければなりません。  
-
-- **xiaowand_startup()**  
-電源OFFから電源ボタン長押しで起動したときに一度だけ呼び出される関数です。  
-ブートモードを切り替えたい場合（例：Bluetoothのペアリングモードに入る）に使用します。  
-この関数を抜けるまでは`xiaowand_loop()`や`xiaowand_shutdown`には制御が移りません。  
-
-- **xiaowand_loop()**  
-電源状態がアクティブの時に常に呼び出される関数です。  
-電源ステートに応じた処理を行うため、通常のユーザープログラムコードは `loop()`の代わりにこの関数へ記述します。  
-
-- **xiaowand_shutdown()**  
-アクティブの状態から電源ボタン長押しでシャットダウンイベントが発生したときに、電源がカットされる前に一度だけ呼び出される関数です。  
-ファイルシステムなどの電源を切る前に開放が必要なリソースの処理や、電源OFFを明示的に処理する必要がある場合に使用します。電源ボタンが離されるまでは電源ONの状態になるため、例えばNeoPixelのLEDテープやI2C接続のディスプレイモジュールの消灯処理などはここで行います。  
-この関数を抜けるまでは電源ONが維持されます。また、この関数に処理が移った時点で`SHUTDOWN`ステートに移行し、以後どのイベントも発生しません。
 
 <br>
 
@@ -345,7 +347,7 @@ XIAO WANDのイベント呼び出しを全て停止し、ボタン長押しに�
 ```cpp
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);   // BULTIN_LEDをON
+  xiaowand_blink(1, 0);   // LED_BULTINをON
 
   // SDカードの初期化に失敗したらHALT
   if (!SD.begin(XIAOWAND_SD_SS_PIN)) {
@@ -384,7 +386,7 @@ void loop() {
 
 XIAOモジュールのLED点滅パターンを設定します。  
 点滅処理はメインの処理とは独立して行われ、いつでも点滅パターンや回数を指定することができます。  
-デフォルトでは`BUILTIN_LED`で指定されるLEDを使用します。また`xiaowand_attach_blink()`でON/OFF時のコールバックを指定して点滅を別のリソースに割り当てることができます。  
+デフォルトでは`LED_BULTIN`で指定されるLEDを使用します。また`xiaowand_attach_blink()`でON/OFF時のコールバックを指定して点滅を別のリソースに割り当てることができます。  
 
 - 書式1  
 *void* xiaowand_blink(*uint32_t* pattern, *int* cycle)  
@@ -423,7 +425,7 @@ XIAOモジュールのLED点滅パターンを設定します。
 ```cpp
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);   // BULTIN_LEDをON
+  xiaowand_blink(1, 0);   // LED_BULTINをON
 }
 	:
 	:
@@ -565,6 +567,20 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 
   - 返値  
   点滅パターンが動作していれば`true`、停止していれば`false`を返します。  
+
+---
+### xiaowand_is_eventcb()
+
+現在の関数がイベントコールバックで呼び出されているかどうかを確認します。
+
+- 書式  
+*bool* xiaowand_is_eventcb(*void*)  
+
+  - 引数  
+  なし
+
+  - 返値  
+  イベントコールバックで呼び出されている時に`true`、それ以外の場合の時には`false`を返します。
 
 ---
 ### xiaowand_attach_press()

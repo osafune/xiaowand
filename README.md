@@ -15,9 +15,9 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 	* microSDカードスロット×1
 
 - 対応ボード
-	* [Seeeduino XIAO](https://wiki.seeedstudio.com/Seeeduino-XIAO/)
-	* [XIAO RP2040](https://wiki.seeedstudio.com/XIAO-RP2040/)
-	* [XIAO BLE(Sense)](https://wiki.seeedstudio.com/XIAO_BLE/)
+	* [Seeeduino XIAO](https://wiki.seeedstudio.com/Seeeduino-XIAO/) ボードマネージャー 1.8.3以降
+	* [XIAO RP2040](https://wiki.seeedstudio.com/XIAO-RP2040/) ボードマネージャー 2.7.2以降
+	* [XIAO BLE(Sense)](https://wiki.seeedstudio.com/XIAO_BLE/) ボードマネージャー 1.0.0 または 2.6.1以降
 
 - 外形サイズ
 	* 幅20mm×長さ115mm×厚み22mm（電池含む）  
