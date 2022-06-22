@@ -20,7 +20,7 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 	* [XIAO BLE(Sense)](https://wiki.seeedstudio.com/XIAO_BLE/) ボードマネージャー 1.0.0 または 2.6.1以降
 
 - 外形サイズ
-	* 幅20mm×長さ115mm×厚み22mm（電池含む）  
+	* 幅20.5mm×長さ115mm×厚み22mm（電池および突起部含む）  
 	固定用ネジ穴 φ3.1×2
 
 ## Board Layout
