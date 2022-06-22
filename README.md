@@ -47,6 +47,7 @@ NeoPixelテープ等を接続することを想定したコネクタです。ENE
   |2|D4/SDA|PIO_D4、I2C-SDAまたはAIN4|
   |3|3.3V|XIAOモジュールからの3.3V出力(max100mA)|
   |4|GND|GND|
+
   ※アナログ入力はXIAO RP2040では使えません  
 
 - **Piezo Buzzer**
