@@ -11,7 +11,7 @@
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);    // LED_BULTINをON
+  xiaowand_blink(1);    // LED_BULTINをON
 }
 
 void loop() {
@@ -49,11 +49,11 @@ XIAO WANDの圧電ブザーは`D0`ピンに接続されています。音を鳴�
 
 ```cpp :beep_sample.ino
 #define XIAOWAND_MODULE_XIAO_BLE
-#define XIAOWAND_BUZZ_PIN D0   // PIN_D0に圧電ブザー
+#define BUZZER_PIN D0       // PIN_D0に圧電ブザー
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);       // LED_BULTINをON
+  xiaowand_blink(1);        // LED_BULTINをON
 }
 
 void loop() {
@@ -64,7 +64,7 @@ void xiaowand_startup() {}
 
 void xiaowand_loop() {
   if (xiaowand_check_click()) {
-    tone(XIAOWAND_BUZZ_PIN, 1000, 100);	// クリックされたらbeep音
+    tone(BUZZER_PIN, 1000, 100);	// クリックされたらbeep音
   }
 }
 
@@ -79,22 +79,22 @@ XIAO WANDのmciroSDカードスロットはSPI接続で使用することがで�
 ```cpp :sd_sample.ino
 #include <SD.h>
 #define XIAOWAND_MODULE_XIAO_BLE
-#define XIAOWAND_SD_SS_PIN D2  // PIN_D2にSDカードの/CS
+#define SD_SS_PIN D2        // PIN_D2にSDカードの/CS
 
 File myfile;
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);       // LED_BULTINをON
+  xiaowand_blink(1);        // LED_BULTINをON
 
-  if (!SD.begin(XIAOWAND_SD_SS_PIN)) {
+  if (!SD.begin(SD_SS_PIN)) {
     xiaowand_blink(0x32, -1);
-    xiaowand_halt();          // カードの初期化に失敗したらHALT
+    xiaowand_halt();        // カードの初期化に失敗したらHALT
   }
   myfile = SD.open("testfile.bin", FILE_READ);
   if (!myfile) {
     xiaowand_blink(0x32, -1);
-    xiaowand_halt();          // ファイルのオープンに失敗したらHALT
+    xiaowand_halt();        // ファイルのオープンに失敗したらHALT
   }
 }
 
@@ -115,18 +115,19 @@ void xiaowand_shutdown() {
 ### NeoPixelの制御をする
 
 XIAO WANDのLED/UART側のGroveコネクタは3.3V/500mAの電源供給ができるため、NeoPixelモジュールを接続して簡単に電飾ユニットにすることができます。  
+NeoPixelの駆動はソフトウェアリソースを多く使うため、MMLサービスを同時に使う場合には音の歪みやテンポの遅れが発生することがあります。  
 
 ```cpp :neopixel_sample.ino
 #include <Adafruit_NeoPixel.h>
 #define XIAOWAND_MODULE_XIAO_BLE
-#define XIAOWAND_NEOPIXEL_PIN D6   // LED側GroveのD1ピン(D6/TXD)
-//#define XIAOWAND_NEOPIXEL_PIN D7   // GroveのD0ピンを使うものもある
-#define NEOPIXEL_LED_NUMBER   60  // 制御するLEDの個数 
+#define NEOPIXEL_PIN D6         // LED側GroveのD1ピン(D6/TXD)
+//#define NEOPIXEL_PIN D7         // GroveのD0ピンを使うものもある
+#define NEOPIXEL_LED_NUMBER 60  // 制御するLEDの個数 
 
 // NeoPixelの表示（60個をレインボー表示）
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(
                               NEOPIXEL_LED_NUMBER,
-                              XIAOWAND_NEOPIXEL_PIN,
+                              NEOPIXEL_PIN,
                               NEO_GRB + NEO_KHZ800);
 void rainbow(void) {
   static int firstPixelHue = 0;
@@ -143,10 +144,10 @@ void rainbow(void) {
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);       // LED_BULTINをON
+  xiaowand_blink(1);  // LED_BULTINをON
 
-  strip.begin();  // NeoPixel開始、この時全てのLEDは0に設定される
-  strip.show();   // LEDへデータ転送し初期化する
+  strip.begin();      // NeoPixel開始、この時全てのLEDは0に設定される
+  strip.show();       // LEDへデータ転送し初期化する
 }
 
 void loop() {
@@ -349,7 +350,7 @@ XIAO WANDのイベント呼び出しを全て停止し、ボタン長押しに�
 ```cpp
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);   // LED_BULTINをON
+  xiaowand_blink(1);   // LED_BULTINをON
 
   // SDカードの初期化に失敗したらHALT
   if (!SD.begin(XIAOWAND_SD_SS_PIN)) {
@@ -414,13 +415,13 @@ XIAOモジュールのLED点滅パターンを設定します。
 
     * cycle  
     点滅回数を指定します。1以上の整数、または-1を指定します。-1を指定した場合はループ動作になります。  
-    0を指定した場合は書式2の即値ON/OFFになります。  
+    0を指定した場合、または省略した場合は書式2の即値ON/OFFになります。  
 
   - 返値  
   なし
 
 - 書式2 
-*void* xiaowand_blink(*uint32_t* led, 0)  
+*void* xiaowand_blink(*uint32_t* led)  
 
   - 引数  
 	  * led
@@ -434,7 +435,7 @@ XIAOモジュールのLED点滅パターンを設定します。
 ```cpp
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1, 0);   // LED_BULTINをON
+  xiaowand_blink(1);   // LED_BULTINをON
 }
     :
     :
@@ -816,5 +817,159 @@ void led_blue() {
 void led_red() {
   digitalWrite(LEDB, HIGH);
   digitalWrite(LEDR, LOW);
+}
+```
+
+--- 
+### xiaowand_mml_play()
+
+MMLの演奏をリクエストします。既に別のMMLを演奏中の場合は新しく演奏を開始します。  
+MMLサービスは通常バックグランドで処理されているため、演奏が終了したかどうかを確認するには`xiaowand_is_mmlplay()`、エラー情報の取得は`xiaowand_mml_status()`を使用します。  
+演奏できるMMLの仕様については別資料を参照してください。  
+
+- 書式  
+*void* xiaowand_mml_play(_const char *_ mml_str [, _const bool_ loop])  
+
+  - 引数  
+    * mml_str  
+    演奏をするMML文字列または文字列のポインタを指定します。  
+    MML文字列は演奏中にMMLサービス側から常に参照されるため、**静的な変数または即値で指定**しなければなりません。  
+    * loop  
+    MMLをループ演奏するかどうかを指定します。`true`でループ演奏、`false`で１回演奏となります。省略した場合は`false`を指定したことになります。  
+
+  - 返値  
+  なし  
+
+- 記述例  
+
+```cpp
+void xiaowand_loop() {
+  // クリックされたらLEDを点滅させてメロディチャイムを演奏 
+  if (xiaowand_check_click()) {
+    xiaowand_blink(0x01211000, 1);
+    xiaowand_mml_play("t84o5l8f+d<a>dea4.ef+e<a>d4.");
+  }
+}
+```
+
+--- 
+### xiaowand_mml_stop()
+
+MMLの停止をリクエストします。MMLが演奏中でない場合は何もしません。  
+
+- 書式  
+*void* xiaowand_mml_stop(*void*)  
+
+  - 引数  
+  なし
+
+  - 返値  
+  なし  
+
+- 記述例  
+
+```cpp
+void xiaowand_loop() {
+  // クリックされたらLEDを点滅させてループ演奏
+  if (xiaowand_check_click()) {
+    xiaowand_blink(0x01211000, 1);
+    xiaowand_mml_play(mml_town, true);
+  }
+
+  // 長押しされたら演奏をストップ
+  if (xiaowand_check_longpush()) {
+    xiaowand_blink(0x01100000, 1);
+    xiaowand_mml_stop();
+  }
+}
+```
+
+---
+### xiaowand_is_mmlplay()
+
+MMLが再生中かどうかを確認します。
+
+- 書式  
+*bool* xiaowand_is_mmlplay(*void*)  
+
+  - 引数  
+  なし
+
+  - 返値  
+  MMLが再生中の時に`true`、それ以外の場合の時には`false`を返します。
+
+- 記述例  
+
+```cpp
+void xiaowand_loop() {
+  // クリックされたら演奏開始
+  if (xiaowand_check_click()) {
+    xiaowand_mml_play(mml_town);
+  }
+
+  // 演奏中はLEDを点滅
+  if (xiaowand_is_mmlplay() && !xiaowand_check_blink()) {
+    xiaowand_blink(0x01117000, 1);
+  }
+}
+```
+
+---
+### xiaowand_mml_status()
+
+MMLサービスで発生したエラーコードと文字列中の位置を取得します。  
+
+- 書式  
+*void* xiaowand_mml_status(_int *_ err_code, _int *_ err_pos)  
+
+  - 引数  
+    * err_code  
+    発生したエラーコードを格納する変数のポインタを指定します。  
+    
+    |値|内部定義ラベル|説明|
+    |---|---|---|
+    |0|MML_OK|エラー発生なし|
+    |-1|SYNTAX_ERROR|文法エラー|
+    |-2|OUT_OF_RANGE|コマンドが指定できる範囲を超えている|
+    |-3|LOOP_OVERFLOW|ループの入れ子数が範囲を超えている|
+    |-4|LOOP_UNDERFLOW|閉じられているないループが存在する|
+
+    * err_pos  
+    エラーが発生したMML文字中の位置を格納する変数のポインタを指定します。  
+    `err_code`が`0`の場合は無効な値になります。  
+
+  - 返値  
+  なし  
+
+- 記述例  
+
+```cpp
+void print_mml_error(const char *mml) {
+  int err_code, err_pos;
+  xiaowand_mml_status(&err_code, &err_pos);
+
+  switch(err_code) {
+    case 0:
+      return;
+    case -1:
+      Serial.println("[!] MML Syntax error.");
+      break;
+    case -2:
+      Serial.println("[!] Parameter out of range.");
+      break;
+    case -3:
+      Serial.println("[!] Too many nested loops.");
+      break;
+    case -4:
+      Serial.println("[!] No corresponding loop.");
+      break;
+    default:
+      Serial.println("[!] Unknown error.");
+  }
+
+  Serial.print(" MML : ");
+  Serial.println(mml);
+  for(int i = 1; i < err_pos+7; i++) Serial.write(" ");
+  Serial.println("^");
 }
 ```

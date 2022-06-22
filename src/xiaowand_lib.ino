@@ -2,7 +2,7 @@
 //    XIAO WAND電源コントロールライブラリ
 //
 //      Author  : Shun OSAFUNE (s.osafune@j7system.jp)
-//      Release : 2022/06/16 Version 0.9
+//      Release : 2022/06/22 Version 0.92
 // ------------------------------------------------------------------------------ //
 //
 // The MIT License
@@ -53,7 +53,6 @@ const int xiaowand_pwren_pin = D3;      // XIAO WANDの電源制御出力ピン(
 const int xiaowand_buzzer_pin = D0;			// XIAO WANDの圧電ブザーピン(PIN_D0)
 #endif
 
-//#define XIAOWAND_REVISION_A             // XIAO WAND Rev.Aの指示
 #define XIAOWAND_REVISION_B             // XIAO WAND Rev.Bの指示
 
 
@@ -354,12 +353,14 @@ static void xiaowand_interval_end(void) {
 #include <Scheduler.h>
 volatile bool xiaowand_interval_enable = false;
 static void xiaowand_interval_loop(void) {
-  delay(100);
-  if (xiaowand_interval_enable) xiaowand_power_interval();
+  while (xiaowand_interval_enable) {
+    delay(100);
+    xiaowand_power_interval();
+  }
 }
 static void xiaowand_inverval_begin(void) {
   xiaowand_interval_enable = true;
-  Scheduler.startLoop(xiaowand_interval_loop);
+  Scheduler.start(xiaowand_interval_loop);
 }
 static void xiaowand_interval_end(void) {
   xiaowand_interval_enable = false;
@@ -494,6 +495,7 @@ enum xiaowand_mml_state_type {
   STOP,
   PLAYING,
   ABORT,
+  INIT,
 };
 
 enum xiaowand_mml_error_type {
@@ -516,27 +518,37 @@ struct xiaowand_mml_resource_type {
   volatile bool play_request;
   const char *playmml;
   bool playloop;
+  int tempo, octave, volume, panning, length, quantize;
   const char *s, *s_top;
-  int tempo, octave, volume, length, quantize;
+  bool was_note_on;
   int loopstack;
   int loopnum[XIAOWAND_MML_LOOPNEST_MAX];
   const char *s_loop[XIAOWAND_MML_LOOPNEST_MAX];
-  int note_freq, note_time;
-  bool note_on;
+  int note_ch, note_freq, note_time, note_wait;
 };
 
 struct xiaowand_mml_resource_type xiaowand_mml = {
   STOP, MML_OK, 0,
   false, false, NULL, false,
-  NULL, NULL,
-  120, 5, 10, 4, 8,
+  120, 5, 8, 64, 4, 8,
+  NULL, NULL, false,
   -1, {0}, {NULL},
-  -1, 0,
-  false
+  0, -1, 0, 0
 };
 
 
 ///// MMLパーサー /////
+// 音源制御ルーチン差し替え用マクロ
+#ifndef XIAOWAND_MML_NOTEON
+# define XIAOWAND_MML_NOTEON(_p)	tone(xiaowand_buzzer_pin, (_p)->note_freq)
+#endif
+#ifndef XIAOWAND_MML_NOTEOFF
+# define XIAOWAND_MML_NOTEOFF(_p)	noTone(xiaowand_buzzer_pin)
+#endif
+#ifndef XIAOWAND_MML_SOUNDSTOP
+# define XIAOWAND_MML_SOUNDSTOP(_p)	noTone(xiaowand_buzzer_pin)
+#endif
+
 // MML文字列の中の数字を取得するサブルーチン
 static int xiaowand_mml_get_number(const char *s, int *num) {
   const char *s_top = s;
@@ -642,7 +654,6 @@ static int xiaowand_mml_get_tone(struct xiaowand_mml_resource_type *p) {
 //			> 0 : 次に呼び出されるまでの待ち時間(ms)
 static int xiaowand_mml_parse(struct xiaowand_mml_resource_type *p) {
   int	n, len, d;
-  bool delay_request = false;
   int result = 0;
 
   // 再生開始リクエストの処理
@@ -650,10 +661,10 @@ static int xiaowand_mml_parse(struct xiaowand_mml_resource_type *p) {
     noTone(xiaowand_buzzer_pin);
     p->s_top = p->playmml;
     p->s = p->s_top;
+    p->was_note_on = false;
     p->loopstack = -1;
     p->note_freq = -1;
     p->note_time = 0;
-    p->note_on = false;
     p->err_code = MML_OK;
     p->err_pos = 0;
     p->play_request = false;
@@ -661,27 +672,35 @@ static int xiaowand_mml_parse(struct xiaowand_mml_resource_type *p) {
   }
 
   // 再生中のMML解析処理
-  while (!delay_request) {
-    if (!*(p->s)) {
-      if (p->loopstack >= 0) {				// 最後まで再生したが閉じられてないループがある
+  while (true) {
+    if (p->note_wait) {					// クォンタイズの消音時間
+      XIAOWAND_MML_NOTEOFF(p);
+      result = p->note_wait;
+      p->note_wait = 0;
+      break;
+
+    } else if (p->stop_request) {		// 再生停止要求があった
+      result = 0;
+      p->stop_request = false;
+      p->state = STOP;
+      XIAOWAND_MML_SOUNDSTOP(p);
+      break;
+
+    } else if (!*(p->s)) {
+      if (p->loopstack >= 0) {		// 最後まで再生したが閉じられてないループがある
         p->s = p->s_loop[p->loopstack] - 1;
         p->err_code = LOOP_UNDERFLOW;
         p->state = ABORT;
         break;
-      } else if (p->note_on && p->playloop) {	// 発音がある楽譜ならループ再生指示有効
+      } else if (p->was_note_on && p->playloop) {	// 発音がある楽譜ならループ再生指示有効
         p->s = p->s_top;
-      } else {								// 再生終了
+      } else {						// 再生終了
+        p->note_time = 0;
+        XIAOWAND_MML_NOTEOFF(p);
         result = 0;
         p->state = STOP;
-        noTone(xiaowand_buzzer_pin);
         break;
       }
-    } else if (p->stop_request) {				// 再生停止要求があった
-      result = 0;
-      p->stop_request = false;
-      p->state = STOP;
-      noTone(xiaowand_buzzer_pin);
-      break;
     }
 
     if (*(p->s) == 'T' || *(p->s) == 't') {
@@ -754,6 +773,23 @@ static int xiaowand_mml_parse(struct xiaowand_mml_resource_type *p) {
       // １ボリューム下げ
       p->s++;
       if (p->volume > 0) p->volume--;
+
+    } else if (*(p->s) == 'P' || *(p->s) == 'p') {
+      // パンニング設定（1～127）
+      p->s++;
+      len = xiaowand_mml_get_number(p->s, &n);
+      if (!len) {
+        p->err_code = SYNTAX_ERROR;
+        p->state = ABORT;
+        break;
+      }
+      if (n < 1 || n > 127) {
+        p->err_code = OUT_OF_RANGE;
+        p->state = ABORT;
+        break;
+      }
+      p->panning = n;
+      p->s += len;
 
     } else if (*(p->s) == 'L' || *(p->s) == 'l') {
       // 基本音長設定（1～xiaowand_mml_divnote_max）
@@ -840,23 +876,28 @@ static int xiaowand_mml_parse(struct xiaowand_mml_resource_type *p) {
 
       // 発音
       if (p->note_freq) {
-        d = (p->note_time * p->quantize) >> 3;
-        if (d < 1) d = 1;
-        tone(xiaowand_buzzer_pin, p->note_freq, d);
-        p->note_on = true;
+        if (p->quantize < 8) {
+          d = (p->note_time * p->quantize + 7) / 8;
+          p->note_wait = p->note_time - d;
+          p->note_time = d;
+        } else {
+          p->note_wait = 0;
+        }
+        XIAOWAND_MML_NOTEON(p);
+        p->was_note_on = true;
+      } else {
+        XIAOWAND_MML_NOTEOFF(p);
       }
-
-      delay_request = true;
       result = p->note_time;
+      break;
     }
   }
 
   // エラー中断処理
   if (p->state == ABORT) {
-    //p->state = STOP;
     p->err_pos = (int)(p->s - p->s_top) + 1;
     result = (int)p->err_code;
-    noTone(xiaowand_buzzer_pin);
+    XIAOWAND_MML_SOUNDSTOP(p);
   }
 
   return result;
@@ -868,8 +909,7 @@ static int xiaowand_mml_parse(struct xiaowand_mml_resource_type *p) {
 # define _XIAOWAND_MML_NO_THREADS
 #elif defined(XIAOWAND_MODULE_XIAO_BLE)
 # if defined(SOFTWARETIMER_H_)
-#  define _XIAOWAND_MML_NO_THREADS
-//#  define _XIAOWAND_MML_USE_SOFTWARETIMER
+#  define _XIAOWAND_MML_USE_SOFTWARETIMER
 # else
 #  define _XIAOWAND_MML_USE_SCHEDULER
 # endif
@@ -881,8 +921,8 @@ static int xiaowand_mml_parse(struct xiaowand_mml_resource_type *p) {
 # error There is no XIAO module name or interval timer resource indication.
 #endif
 
-// XIAO BLEでRTOSソフトウェアタイマーを使っている時（検証まだ）
-#if 0 //ifdef _XIAOWAND_MML_USE_SOFTWARETIMER
+// XIAO BLEでRTOSソフトウェアタイマーを使っている時
+#ifdef _XIAOWAND_MML_USE_SOFTWARETIMER
 SoftwareTimer MMLtimer;
 static void xiaowand_mml_handler(void) {
   MMLtimer.stop();
@@ -902,7 +942,7 @@ static void xiaowand_mml_handler_begin(void) {
   MMLtimer.begin(100, xiaowand_mml_loop);
   MMLtimer.stop();
 }
-static void xiaowand_interval_end(void) {
+static void xiaowand_mml_handler_end(void) {
   MMLtimer.stop();
 }
 #undef _XIAOWAND_MML_USE_SOFTWARETIMER
@@ -911,19 +951,22 @@ static void xiaowand_interval_end(void) {
 // XIAO BLE/XIAO RP2040でタスクスケジューラーを使っている時
 #ifdef _XIAOWAND_MML_USE_SCHEDULER
 #include <Scheduler.h>
-static bool xiaowand_mml_handler_enable = false;
+volatile bool xiaowand_mml_handler_enable = false;
 static void xiaowand_mml_handler(void) {
 }
 static void xiaowand_mml_loop(void) {
-  if (xiaowand_mml_handler_enable && (xiaowand_mml.state == PLAYING || xiaowand_mml.play_request)) {
-    int res = xiaowand_mml_parse(&xiaowand_mml);
-    if (res > 0) delay(res);
+  while (xiaowand_mml_handler_enable) {
+    if (xiaowand_mml.state == PLAYING || xiaowand_mml.play_request) {
+      int res = xiaowand_mml_parse(&xiaowand_mml);
+      if (res > 0) delay(res);
+    } else {
+      yield();
+    }
   }
-  yield();
 }
 static void xiaowand_mml_handler_begin(void) {
   xiaowand_mml_handler_enable = true;
-  Scheduler.startLoop(xiaowand_mml_loop);
+  Scheduler.start(xiaowand_mml_loop);
 }
 static void xiaowand_mml_handler_end(void) {
   xiaowand_mml_handler_enable = false;
@@ -981,7 +1024,7 @@ static void xiaowand_mml_handler_end(void) {
 void xiaowand_mml_begin(void) {
   struct xiaowand_mml_resource_type *p = &xiaowand_mml;
 
-  p->state = STOP;
+  p->state = INIT;
   p->err_code = MML_OK;
   p->err_pos = 0;
   p->stop_request = false;
@@ -991,27 +1034,33 @@ void xiaowand_mml_begin(void) {
 
   p->tempo = 120;
   p->octave = 5;
-  p->volume = 10;
+  p->volume = 8;
+  p->panning = 64;
   p->length = 4;
   p->quantize = 8;
+
   p->s_top = NULL;
   p->s = NULL;
+  p->was_note_on = false;
   p->loopstack = -1;
+  p->note_ch = 0;
   p->note_freq = -1;
   p->note_time = 0;
-  p->note_on = false;
+  p->note_wait = 0;
 
   // noToneだけを先に呼ぶとハングアップするのを防止するワークアラウンド
-  tone(xiaowand_buzzer_pin, 440, 0);
+  tone(xiaowand_buzzer_pin, 440);
   noTone(xiaowand_buzzer_pin);
+  //XIAOWAND_MML_SOUNDSTOP(p);
+  p->state = STOP;
 
   xiaowand_mml_handler_begin();
 }
 
 // MMLサービスの終了
 void xiaowand_mml_end(void) {
-	xiaowand_mml_handler_end();
-	noTone(xiaowand_buzzer_pin);
+  xiaowand_mml_handler_end();
+  XIAOWAND_MML_SOUNDSTOP(&xiaowand_mml);
 }
 
 // MMLが再生中かどうか確認
