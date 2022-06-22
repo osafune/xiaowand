@@ -11,7 +11,7 @@
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1);    // LED_BULTINをON
+  xiaowand_blink(1, 0);   // LED_BULTINをON
 }
 
 void loop() {
@@ -53,7 +53,7 @@ XIAO WANDの圧電ブザーは`D0`ピンに接続されています。音を鳴�
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1);        // LED_BULTINをON
+  xiaowand_blink(1, 0);     // LED_BULTINをON
 }
 
 void loop() {
@@ -85,7 +85,7 @@ File myfile;
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1);        // LED_BULTINをON
+  xiaowand_blink(1, 0);     // LED_BULTINをON
 
   if (!SD.begin(SD_SS_PIN)) {
     xiaowand_blink(0x32, -1);
@@ -144,7 +144,7 @@ void rainbow(void) {
 
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1);  // LED_BULTINをON
+  xiaowand_blink(1, 0);  // LED_BULTINをON
 
   strip.begin();      // NeoPixel開始、この時全てのLEDは0に設定される
   strip.show();       // LEDへデータ転送し初期化する
@@ -350,7 +350,7 @@ XIAO WANDのイベント呼び出しを全て停止し、ボタン長押しに�
 ```cpp
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1);   // LED_BULTINをON
+  xiaowand_blink(1, 0);   // LED_BULTINをON
 
   // SDカードの初期化に失敗したらHALT
   if (!SD.begin(XIAOWAND_SD_SS_PIN)) {
@@ -415,13 +415,13 @@ XIAOモジュールのLED点滅パターンを設定します。
 
     * cycle  
     点滅回数を指定します。1以上の整数、または-1を指定します。-1を指定した場合はループ動作になります。  
-    0を指定した場合、または省略した場合は書式2の即値ON/OFFになります。  
+    0を指定した場合は書式2の即値ON/OFFになります。  
 
   - 返値  
   なし
 
 - 書式2 
-*void* xiaowand_blink(*uint32_t* led)  
+*void* xiaowand_blink(*uint32_t* led, 0)  
 
   - 引数  
 	  * led
@@ -435,7 +435,7 @@ XIAOモジュールのLED点滅パターンを設定します。
 ```cpp
 void setup() {
   xiaowand_power_begin();
-  xiaowand_blink(1);   // LED_BULTINをON
+  xiaowand_blink(1, 0);   // LED_BULTINをON
 }
     :
     :
@@ -828,14 +828,14 @@ MMLサービスは通常バックグランドで処理されているため、�
 演奏できるMMLの仕様については別資料を参照してください。  
 
 - 書式  
-*void* xiaowand_mml_play(_const char *_ mml_str [, _const bool_ loop])  
+*void* xiaowand_mml_play(_const char *_ mml_str, _const bool_ loop)  
 
   - 引数  
     * mml_str  
     演奏をするMML文字列または文字列のポインタを指定します。  
     MML文字列は演奏中にMMLサービス側から常に参照されるため、**静的な変数または即値で指定**しなければなりません。  
     * loop  
-    MMLをループ演奏するかどうかを指定します。`true`でループ演奏、`false`で１回演奏となります。省略した場合は`false`を指定したことになります。  
+    MMLをループ演奏するかどうかを指定します。`true`でループ演奏、`false`で１回演奏となります。  
 
   - 返値  
   なし  
@@ -847,7 +847,7 @@ void xiaowand_loop() {
   // クリックされたらLEDを点滅させてメロディチャイムを演奏 
   if (xiaowand_check_click()) {
     xiaowand_blink(0x01211000, 1);
-    xiaowand_mml_play("t84o5l8f+d<a>dea4.ef+e<a>d4.");
+    xiaowand_mml_play("t84o5l8f+d<a>dea4.ef+e<a>d4.", false);
   }
 }
 ```
@@ -904,7 +904,7 @@ MMLが再生中かどうかを確認します。
 void xiaowand_loop() {
   // クリックされたら演奏開始
   if (xiaowand_check_click()) {
-    xiaowand_mml_play(mml_town);
+    xiaowand_mml_play(mml_town, false);
   }
 
   // 演奏中はLEDを点滅
