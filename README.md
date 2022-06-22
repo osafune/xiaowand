@@ -25,7 +25,8 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 
 ## Board Layout
 ![img_board](img/xiaowand_board.jpg)  
-- **Power/UserSW**
+
+- **Power/UserSW**  
 電源ON/OFFおよびユーザー入力（クリック、長押し）のタクタイルスイッチです。ステート制御は`xiaowand_lib`で行います。  
 
 - **Grove1 (LED/PIO/UART)**  
@@ -50,10 +51,10 @@ NeoPixelテープ等を接続することを想定したコネクタです。ENE
 
   ※アナログ入力はXIAO RP2040では使えません  
 
-- **Piezo Buzzer**
+- **Piezo Buzzer**  
 オンボード搭載のピエゾブザーです。  
 
-- **μSD/TF slot**
+- **μSD/TF slot**  
 microSD/TFカードを挿入するスロットです。XIAOモジュールの3.3Vで駆動され、USBが接続されている間は常に電源が供給されます。  
 
 
