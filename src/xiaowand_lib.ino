@@ -2,7 +2,7 @@
 //    XIAO WAND電源コントロールライブラリ
 //
 //      Author  : Shun OSAFUNE (s.osafune@j7system.jp)
-//      Release : 2022/06/22 Version 0.92
+//      Release : 2022/07/03 Version 0.93
 // ------------------------------------------------------------------------------ //
 //
 // The MIT License
