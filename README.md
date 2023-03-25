@@ -8,7 +8,7 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 専用のArduino IDE用ライブラリ「xiaowand_lib」では、ボードの電源制御およびボタンイベント取得、LEDパターン点滅、MMLバックグランド再生の機能が提供され、XIAO BLEと組み合わせれば簡単にBluetooth制御の電飾ユニットが製作できます。
 
 - ボード搭載ペリフェラル
-	* 電源モジュール×1 (Ni-MH AA,3.3V/500mA)
+	* 電源モジュール×1 (Ni-MH AA,最大3.3V/1000mA)
 	* タクタイルスイッチ×1 (電源ボタン・ユーザーボタン兼用)
 	* Groveコネクタ×2 (LED/UART用×1, I2C/PIO/AIN用×1)
 	* 圧電ブザー×1
@@ -30,13 +30,13 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 電源ON/OFFおよびユーザー入力（クリック、長押し）のタクタイルスイッチです。ステート制御は`xiaowand_lib`で行います。  
 
 - **Grove1 (LED/PIO/UART)**  
-NeoPixelテープ等を接続することを想定したコネクタです。ENEBATTからの直接出力で最大3.3V/500mAの電流を使うことができます。  
+NeoPixelテープ等を接続することを想定したコネクタです。ENEBATTからの直接出力で最大3.3V/1000mAを使うことができます。  
 
   |PIN|信号名|内容|
   |---|---|---|
   |1|D7/RXD|PIO_D7またはUART-RXD|
   |2|D6/TXD|PIO_D6またはUART-TXD|
-  |3|VLED|ENEBATTからの3.3V出力(max500mA)|
+  |3|VLED|ENEBATTからの3.3V出力|
   |4|GND|GND|
 
 - **Grove2 (I2C/PIO/AIN)**  
@@ -67,5 +67,5 @@ microSD/TFカードを挿入するスロットです。XIAOモジュールの3.3
 - [ENEBATT](https://osafune.github.io/enebatt_jp.html)
 
 ## Contant Us
-- [GitHub - Shun OSAFUNE](https://github.com/osafune)
 - [Twitter - @s_osafune](https://twitter.com/s_osafune)
+- [GitHub - Shun OSAFUNE](https://github.com/osafune)
