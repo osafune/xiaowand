@@ -12,7 +12,7 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 	* タクタイルスイッチ×1 (電源ボタン・ユーザーボタン兼用)
 	* Groveコネクタ×2 (LED/UART用×1, I2C/PIO/AIN用×1)
 	* 圧電ブザー×1
-	* microSDカードスロット×1
+	* μSD/TFカードスロット×1
 
 - 対応ボード
 	* [Seeeduino XIAO](https://wiki.seeedstudio.com/Seeeduino-XIAO/) ボードマネージャー 1.8.3以降
