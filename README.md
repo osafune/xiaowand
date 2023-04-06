@@ -66,6 +66,10 @@ microSD/TFカードを挿入するスロットです。XIAOモジュールの3.3
 - [回路図(Rev.B)](pcb/xiaowand_pcb_revb_schem.pdf)
 - [ENEBATT](https://osafune.github.io/enebatt_jp.html)
 
+## Buy now
+
+準備中
+
 ## Contant Us
-- [Twitter - @s_osafune](https://twitter.com/s_osafune)
 - [GitHub - Shun OSAFUNE](https://github.com/osafune)
+- Sales - sales@j7system.jp
