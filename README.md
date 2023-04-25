@@ -61,14 +61,17 @@ microSD/TFカードを挿入するスロットです。XIAOモジュールの3.3
 ## Documents
 - [XAIO WAND プログラミングガイド](xiaowand_programming_guide_jp.md)
 
+
 ## Resources
 - [XIAO WAND ライブラリ(Arduino IDE用)](src/xiaowand_lib.ino)
 - [回路図(Rev.B)](pcb/xiaowand_pcb_revb_schem.pdf)
 - [ENEBATT](https://osafune.github.io/enebatt_jp.html)
 
-## Buy now
 
-準備中
+## Buy now
+スイッチサイエンス
+[XIAO WAND - XIAO用電源ベースボード](https://www.switch-science.com/products/8910)
+
 
 ## Contant Us
 - [GitHub - Shun OSAFUNE](https://github.com/osafune)
