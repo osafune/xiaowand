@@ -18,6 +18,7 @@ W20mm×L115mm×H22mmのコンパクトサイズに、高出力・高効率の電
 	* [Seeeduino XIAO](https://wiki.seeedstudio.com/Seeeduino-XIAO/) ボードマネージャー 1.8.3以降
 	* [XIAO RP2040](https://wiki.seeedstudio.com/XIAO-RP2040/) ボードマネージャー 2.7.2以降
 	* [XIAO BLE(Sense)](https://wiki.seeedstudio.com/XIAO_BLE/) ボードマネージャー 1.0.0 または 2.6.1以降
+  * XAIO ESP32C3 対応予定
 
 - 外形サイズ
 	* 幅20.5mm×長さ115mm×厚み22mm（電池および突起部含む）  
@@ -73,6 +74,17 @@ microSD/TFカードを挿入するスロットです。XIAOモジュールの3.3
 [XIAO WAND - XIAO用電源ベースボード](https://www.switch-science.com/products/8910)
 
 
+## QandA
+- Q. 充電機能はありますか？  
+A. 保安のため充電機能は搭載されていません。別途充電器をご利用ください。
+
+- Q. XIAO ESP32C3には対応しますか？  
+A. ハードウェア上は問題なく使用できます。xiaowand_libはアップデートで対応予定です。
+
+- Q. Arduino IDE 2.xで使用できますか？  
+A. 現時点では動作確認をしていません。アップデートで対応予定です。
+
+
 ## Contant Us
 - [GitHub - Shun OSAFUNE](https://github.com/osafune)
-- Sales - sales@j7system.jp
+- Mail - support@j7system.jp
