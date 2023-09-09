@@ -3,10 +3,11 @@
 //
 //      Author  : Shun OSAFUNE (s.osafune@j7system.jp)
 //      Release : 2022/07/03 Version 0.93
+//              : 2023/06/13 Version 0.94
 // ------------------------------------------------------------------------------ //
 //
 // The MIT License
-// Copyright (c) 2022 Shun OSAFUNE/J-7SYSTEM WORKS LIMITED
+// Copyright (c) 2022 Shun OSAFUNE / J-7SYSTEM WORKS LIMITED.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +54,7 @@ const int xiaowand_pwren_pin = D3;      // XIAO WANDの電源制御出力ピン(
 const int xiaowand_buzzer_pin = D0;			// XIAO WANDの圧電ブザーピン(PIN_D0)
 #endif
 
-#define XIAOWAND_REVISION_B             // XIAO WAND Rev.Bの指示
+#define XIAOWAND_REVISION_B             // XIAO WAND Rev.B/Cの指示
 
 
 // ------------------------------------------------------------------------------ //
@@ -64,17 +65,17 @@ const int xiaowand_buzzer_pin = D0;			// XIAO WANDの圧電ブザーピン(PIN_D
 enum xiaowand_power_state_type {STARTUP, ACTIVE, SHUTDOWN, HALT};
 volatile enum xiaowand_power_state_type xiaowand_state = STARTUP;
 
-volatile bool xiaowand_event_press = false;
-volatile bool xiaowand_event_release = false;
 volatile bool xiaowand_event_startup = false;
 volatile bool xiaowand_event_shutdown = false;
+volatile bool xiaowand_event_press = false;
+volatile bool xiaowand_event_release = false;
 volatile bool xiaowand_event_longpush = false;
 volatile bool xiaowand_event_click = false;
 static bool xiaowand_event_exec = false;
-static void (*xiaowand_press_cb)(void) = NULL;
-static void (*xiaowand_release_cb)(void) = NULL;
 static void (*xiaowand_startup_cb)(void) = NULL;
 static void (*xiaowand_shutdown_cb)(void) = NULL;
+static void (*xiaowand_press_cb)(void) = NULL;
+static void (*xiaowand_release_cb)(void) = NULL;
 static void (*xiaowand_longpush_cb)(void) = NULL;
 static void (*xiaowand_click_cb)(void) = NULL;
 
@@ -91,6 +92,20 @@ bool xiaowand_is_active(void) {
   return (xiaowand_state == ACTIVE);
 }
 
+// スタートアップイベントが起こったかどうかをチェック（システム側でのみ使用）
+static bool xiaowand_check_startup(void) {
+  bool res = xiaowand_event_startup;
+  xiaowand_event_startup = false;
+  return res;
+}
+
+// シャットダウンイベントが起こったかどうかをチェック（システム側でのみ使用）
+static bool xiaowand_check_shutdown(void) {
+  bool res = xiaowand_event_shutdown;
+  xiaowand_event_shutdown = false;
+  return res;
+}
+
 // ボタン押下イベントが起こったかどうかをチェック
 bool xiaowand_check_press(void) {
   bool res = xiaowand_event_press;
@@ -102,20 +117,6 @@ bool xiaowand_check_press(void) {
 bool xiaowand_check_release(void) {
   bool res = xiaowand_event_release;
   xiaowand_event_release = false;
-  return res;
-}
-
-// スタートアップイベントが起こったかどうかをチェック
-bool xiaowand_check_startup(void) {
-  bool res = xiaowand_event_startup;
-  xiaowand_event_startup = false;
-  return res;
-}
-
-// シャットダウンイベントが起こったかどうかをチェック
-bool xiaowand_check_shutdown(void) {
-  bool res = xiaowand_event_shutdown;
-  xiaowand_event_shutdown = false;
   return res;
 }
 
@@ -140,16 +141,6 @@ bool xiaowand_is_eventcb(void) {
   return xiaowand_event_exec;
 }
 
-// ボタン押下イベントのコールバックを登録
-void xiaowand_attach_press(void (*cb_func)(void)) {
-  xiaowand_press_cb = cb_func;
-}
-
-// ボタンリリースイベントのコールバックを登録
-void xiaowand_attach_release(void (*cb_func)(void)) {
-  xiaowand_release_cb = cb_func;
-}
-
 // スタートアップイベントのコールバックを登録
 void xiaowand_attach_startup(void (*cb_func)(void)) {
   xiaowand_startup_cb = cb_func;
@@ -158,6 +149,16 @@ void xiaowand_attach_startup(void (*cb_func)(void)) {
 // シャットダウンイベントのコールバックを登録
 void xiaowand_attach_shutdown(void (*cb_func)(void)) {
   xiaowand_shutdown_cb = cb_func;
+}
+
+// ボタン押下イベントのコールバックを登録
+void xiaowand_attach_press(void (*cb_func)(void)) {
+  xiaowand_press_cb = cb_func;
+}
+
+// ボタンリリースイベントのコールバックを登録
+void xiaowand_attach_release(void (*cb_func)(void)) {
+  xiaowand_release_cb = cb_func;
 }
 
 // ボタン長押しイベントのコールバックを登録

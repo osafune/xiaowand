@@ -1,10 +1,12 @@
 # XIAO WANDプログラミングガイド
 
+***
+
 ## 1.簡単なサンプル例(XIAO BLEを使用)
 
 ### 基本的なフレームワーク
 
-1. Arduno IDEで新しいスケッチを作成し、以下のコードを記述します。
+1. Arduino IDEで新しいスケッチを作成し、以下のコードを記述します。
 
 ```cpp :sample.ino
 #define XIAOWAND_MODULE_XIAO_BLE
@@ -117,7 +119,7 @@ void xiaowand_shutdown() {
   
 ### NeoPixelの制御をする
 
-XIAO WANDのLED/UART側のGroveコネクタは最大3.3V/1000mAの電源供給ができるため、NeoPixelモジュールを接続して電飾ユニットにすることができます。  
+XIAO WANDのLED/UART側のGroveコネクタは3.3V/500mAの電源供給ができるため、NeoPixelモジュールを接続して電飾ユニットにすることができます。  
 NeoPixelの駆動はソフトウェアリソースを多く使う都合上、MMLサービスを同時に使う場合には音の歪みやテンポの遅れが発生することがあります。  
 
 ```cpp :neopixel_sample.ino
@@ -223,17 +225,17 @@ XIAO WAND電源コントロールの内部ステート遷移は以下のよう�
 
 ```mermaid
 flowchart TD
-  s1((RESET))-->STARTUP
-  STARTUP-->|ボタンリリースイベント|ACTIVE
-  STARTUP-->|"xiaowand_halt()"|HALT
-  STARTUP-->|"xiaowand_power_end()"|SHUTDOWN
+  s1((RESET))-->POWERUP
+  POWERUP-->|ボタンリリースイベント|ACTIVE
+  POWERUP-->|"xiaowand_halt()"|HALT
+  POWERUP-->|"xiaowand_power_end()"|SHUTDOWN
   ACTIVE-->|シャットダウンイベント|SHUTDOWN
   ACTIVE-->|"xiaowand_power_end()"|SHUTDOWN
   ACTIVE-->|"xiaowand_halt()"|HALT
   HALT-->|電源OFF遷移|SHUTDOWN
 ```
 
-- **STARTUPステート**  
+- **POWERUPステート**  
 ボード電源コントロールをイネーブルにしてから最初のボタンリリースイベント発生、あるいは`HALT`、`SHUTDOWN`への明示的な遷移が行われるまでの状態です。  
 このステートではボタン押下イベント、ボタンリリースイベント、スタートアップイベントが発生します。  
 - **ACTIVEステート**  
@@ -251,9 +253,9 @@ flowchart TD
 内部ステートが`HALT`以外のときにボタンが押された場合に発生します。  
 0. ボタンリリースイベント  
 内部ステートが`HALT`以外のときにボタンが離された場合に発生します。  
-`STARTUP`ステートでこのイベントが発生すると`ACTIVE`ステートに遷移します。  
+`POWERUP`ステートでこのイベントが発生すると`ACTIVE`ステートに遷移します。  
 0. スタートアップイベント  
-`STARTUP`ステートのときに5秒以上ボタンが押されたままになっていると１回だけ発生します。  
+`POWERUP`ステートのときに5秒以上ボタンが押されたままになっていると１回だけ発生します。  
 0. シャットダウンイベント  
 `ACTIVE`ステートのときに5秒以上ボタンが押されたままになっていると１回だけ発生します。その後は`SHUTDOWN`ステートに遷移します。  
 0. ボタン長押しイベント  
@@ -266,7 +268,7 @@ flowchart TD
 ```cpp :xiaowand_lib.ino(抜粋)
 // 定数
 const int xiaowand_pswcount_max = 100;  // 長押し検出の最大時間(0.1秒単位で10秒まで)
-const int xiaowand_startup_hold = 50;   // 電源ONから5秒間長押し(STARTUP)
+const int xiaowand_startup_hold = 50;   // 電源ONから5秒間長押し(POWERUP)
 const int xiaowand_shutdown_hold = 50;  // 5秒間長押しで電源OFF(SHUTDOWN)
 const int xiaowand_longpush_hold = 20;  // 2秒で長押し検出(LONGPUSH)
 const int xiaowand_click_hold = 5;      // 0.5秒以下でクリック検出(CLICK)
@@ -352,7 +354,7 @@ nは20～280の整数です。nは1分間に四分音符をn回数える速さ�
 ### xiaowand_power_begin()
 
 電源制御処理を初期化し、XIAO WANDの電源コントロールおよびMMLサービスを開始します。  
-全てのイベントフラグおよびコールバックは初期化され、内部ステートは`STARTUP`に設定されます。この関数の実行までは電源ONの維持はされないため、通常は`setup()`の先頭に記述します。  
+全てのイベントフラグおよびコールバックは初期化され、内部ステートは`POWERUP`に設定されます。この関数の実行までは電源ONの維持はされないため、通常は`setup()`の先頭に記述します。  
 ※この関数は`setup()`以外の場所では使うことができません。  
 
 - 書式  
@@ -494,11 +496,11 @@ XIAOモジュールのLED点滅パターンを設定します。
   - 返値  
   なし
 
-- 書式2 
+- 書式2  
 *void* xiaowand_blink(*uint32_t* led, 0)  
 
   - 引数  
-	  * led
+	  * led  
 	  LEDのON/OFFを指定します。`0`を指定した場合はLED消灯、`≠0`を指定した場合はLED点灯します。 
 
   - 返値  
@@ -576,38 +578,6 @@ XIAO WANDの電源がアクティブかどうかを確認します。
   この関数が呼ばれるまでにリリースイベントがあれば`true`、なければ`false`を返します。  
 
 ---
-### xiaowand_check_startup()
-
-スタートアップイベント（ボタンの長押し起動）が発生したかどうかを確認します。  
-通常は`xiaowand_polling()`の中で適切に処理されるため不要ですが、スケジューラー等で別スレッドから状態を確認したい場合などに使用します。  
-この関数が呼ばれるとスタートアップのイベント発生フラグはクリアされます。
-
-- 書式  
-*bool* xiaowand_check_startup(*void*)  
-
-  - 引数  
-  なし
-
-  - 返値  
-  この関数が呼ばれるまでにスタートアップイベントがあれば`true`、なければ`false`を返します。  
-
----
-### xiaowand_check_shutdown()
-
-シャットダウンイベント（アクティブ時のボタンの長押し）が発生したかどうかを確認します。  
-通常は`xiaowand_polling()`の中で適切に処理されるため不要ですが、スケジューラー等で別スレッドから状態を確認したい場合などに使用します。  
-この関数が呼ばれるとシャットダウンのイベント発生フラグはクリアされます。
-
-- 書式  
-*bool* xiaowand_check_startup(*void*)  
-
-  - 引数  
-  なし
-
-  - 返値  
-  この関数が呼ばれるまでにシャットダウンイベントがあれば`true`、なければ`false`を返します。  
-
----
 ### xiaowand_check_longpush()
 
 ボタンの長押しイベントが発生したかどうかを確認します。  
@@ -665,68 +635,6 @@ XIAO WANDの電源がアクティブかどうかを確認します。
 
   - 返値  
   イベントコールバックで呼び出されている時に`true`、それ以外の場合の時には`false`を返します。
-
----
-### xiaowand_attach_press()
-
-ボタン押下イベントで呼び出されるコールバックを登録します。  
-コールバックは割り込みハンドラやタスクスケジューラ内から呼ばれるため、使えるリソースに制限があることに注意してください。
-
-- 書式  
-*void* xiaowand_attach_press(_void (*cb_func)(void)_)  
-
-  - 引数  
-    * cb_func  
-    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
-
-  - 返値  
-  なし
-
-- 記述例  
-
-```cpp
-void setup() {
-    :
-    :
-  xiaowand_attach_press(count_press);
-}
-
-int count_press_value = 0;  // ボタンが押された数をカウント
-void count_press(void) {
-  count_press_value++;
-}
-```
-
----
-### xiaowand_attach_release()
-
-ボタンリリースイベントで呼び出されるコールバックを登録します。  
-コールバックは割り込みハンドラやタスクスケジューラ内から呼ばれるため、使えるリソースに制限があることに注意してください。
-
-- 書式  
-*void* xiaowand_attach_release(_void (*cb_func)(void)_)  
-
-  - 引数  
-    * cb_func  
-    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
-
-  - 返値  
-  なし
-
-- 記述例  
-
-```cpp
-void setup() {
-    :
-    :
-  xiaowand_attach_release(count_release);
-}
-
-int count_release_value = 0;  // ボタンが離された数をカウント
-void count_release(void) {
-  count_release_value++;
-}
-```
 
 ---
 ### xiaowand_attach_startup()
@@ -787,6 +695,68 @@ void setup() {
 void on_shutdown(void) {
     :
     :
+}
+```
+
+---
+### xiaowand_attach_press()
+
+ボタン押下イベントで呼び出されるコールバックを登録します。  
+コールバックは割り込みハンドラやタスクスケジューラ内から呼ばれるため、使えるリソースに制限があることに注意してください。
+
+- 書式  
+*void* xiaowand_attach_press(_void (*cb_func)(void)_)  
+
+  - 引数  
+    * cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+
+  - 返値  
+  なし
+
+- 記述例  
+
+```cpp
+void setup() {
+    :
+    :
+  xiaowand_attach_press(count_press);
+}
+
+int count_press_value = 0;  // ボタンが押された数をカウント
+void count_press(void) {
+  count_press_value++;
+}
+```
+
+---
+### xiaowand_attach_release()
+
+ボタンリリースイベントで呼び出されるコールバックを登録します。  
+コールバックは割り込みハンドラやタスクスケジューラ内から呼ばれるため、使えるリソースに制限があることに注意してください。
+
+- 書式  
+*void* xiaowand_attach_release(_void (*cb_func)(void)_)  
+
+  - 引数  
+    * cb_func  
+    イベントで呼び出される関数を指定します。`NULL`を指定した場合はコールバックを解除します。  
+
+  - 返値  
+  なし
+
+- 記述例  
+
+```cpp
+void setup() {
+    :
+    :
+  xiaowand_attach_release(count_release);
+}
+
+int count_release_value = 0;  // ボタンが離された数をカウント
+void count_release(void) {
+  count_release_value++;
 }
 ```
 
@@ -1047,3 +1017,14 @@ void print_mml_error(const char *mml) {
   Serial.println("^");
 }
 ```
+
+***
+<a id="section5"></a><br>
+
+## 5.更新履歴
+
+|Rev|日付|内容|
+|---|---|---|
+|0.95|2023/09/09|内部ステート名を変更|
+|0.94|2023/06/13|xiaowand_check_startup() および xiaowand_check_shutdown() を削除|
+|0.93|2023/04/07|公開|
